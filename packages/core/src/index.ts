@@ -24,7 +24,7 @@ export type LinkStore = z.infer<typeof LinkStoreSchema>;
 
 export interface WebDAVConfig {
   url: string;
-  username: string;
+  username?: string;
   password?: string;
   token?: string;
 }
@@ -37,24 +37,29 @@ export class LinkKeepClient {
   private readonly fileName = "links.json";
 
   constructor(config: WebDAVConfig) {
-    this.client = createClient(config.url, {
-      authType: AuthType.Password,
-      username: config.username,
-      password: config.password,
-    });
+    const options: any = {
+      // Use browser session if no credentials provided
+      headers: { 
+        "Cache-Control": "no-cache", 
+        "Pragma": "no-cache" 
+      }
+    };
+
+    if (config.username && config.password) {
+      options.authType = AuthType.Password;
+      options.username = config.username;
+      options.password = config.password;
+    }
+
+    this.client = createClient(config.url, options);
   }
 
-  /**
-   * Verifies the connection.
-   */
   async verifyConnection(): Promise<boolean> {
     try {
-      // Force a request that must be authenticated
-      await this.client.getDirectoryContents("/", { 
-        details: false 
-      });
+      await this.client.getDirectoryContents("/", { details: false });
       return true;
     } catch (error: any) {
+      console.error("LinkKeep: Connection check failed", error);
       return false;
     }
   }
@@ -76,20 +81,18 @@ export class LinkKeepClient {
         return { version: "1.0", links: [] };
       }
 
-      // Explicitly set headers to avoid caching
       const content = (await this.client.getFileContents(fullPath, {
         format: "text",
         headers: { 
           "Cache-Control": "no-cache, no-store, must-revalidate", 
-          "Pragma": "no-cache",
-          "Expires": "0"
+          "Pragma": "no-cache" 
         }
       })) as string;
       
       const data = JSON.parse(content);
       return LinkStoreSchema.parse(data);
     } catch (error) {
-      throw new Error("Access denied or connection error. Check your credentials.");
+      throw new Error("Access denied. Please ensure you are logged into your Nextcloud in this browser.");
     }
   }
 
@@ -100,14 +103,13 @@ export class LinkKeepClient {
       const content = JSON.stringify(store, null, 2);
       await this.client.putFileContents(fullPath, content);
     } catch (error) {
-      throw new Error("Could not save to WebDAV. Check permissions.");
+      throw new Error("Could not save to WebDAV. Check permissions or login status.");
     }
   }
 
   async addLink(linkData: Omit<Link, "id" | "addedAt" | "isRead">): Promise<Link> {
     const store = await this.fetchLinks();
     const existingIndex = store.links.findIndex(l => l.url === linkData.url);
-    
     if (existingIndex !== -1) {
       const existing = store.links[existingIndex];
       if (!existing.isRead) return existing;
@@ -119,7 +121,6 @@ export class LinkKeepClient {
       await this.saveLinks(store);
       return existing;
     }
-
     const newLink: Link = {
       ...linkData,
       id: crypto.randomUUID(),
@@ -127,7 +128,6 @@ export class LinkKeepClient {
       isRead: false,
       tags: linkData.tags || [],
     };
-
     store.links.unshift(newLink);
     await this.saveLinks(store);
     return newLink;
