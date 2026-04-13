@@ -30,16 +30,20 @@ export default function App() {
     return links.some(l => l.url === currentTab.url && !l.isRead);
   }, [links, currentTab.url]);
 
+  const isUrlValid = useMemo(() => {
+    return config.url && config.url.trim().startsWith("https://");
+  }, [config.url]);
+
   // Extract base Nextcloud URL for login button
   const nextcloudBaseUrl = useMemo(() => {
-    if (!config.url) return null;
+    if (!isUrlValid) return null;
     try {
       const url = new URL(config.url);
       return `${url.protocol}//${url.host}`;
     } catch (e) {
       return null;
     }
-  }, [config.url]);
+  }, [config.url, isUrlValid]);
 
   useEffect(() => {
     async function init() {
@@ -94,6 +98,7 @@ export default function App() {
   }, [filter, sortBy]);
 
   const fetchLinks = async (cfg: WebDAVConfig) => {
+    if (!cfg.url) return;
     setLoading(true);
     try {
       const client = new LinkKeepClient(cfg);
@@ -108,6 +113,7 @@ export default function App() {
   };
 
   const testConnection = async () => {
+    if (!isUrlValid) return;
     setTestingConnection(true);
     setStatus({ message: "Checking session...", type: "info" });
     try {
@@ -126,17 +132,24 @@ export default function App() {
   };
 
   const handleSaveSettings = async () => {
-    if (!config.url) return;
     setLoading(true);
     try {
       await browser.storage.local.set({ webdav_url: config.url });
-      const client = new LinkKeepClient(config);
-      const store = await client.fetchLinks();
-      setLinks(store.links);
-      await browser.storage.local.set({ links_cache: store.links });
-      setIsConfigured(true);
+      
+      if (config.url) {
+        const client = new LinkKeepClient(config);
+        const store = await client.fetchLinks();
+        setLinks(store.links);
+        await browser.storage.local.set({ links_cache: store.links });
+        setIsConfigured(true);
+      } else {
+        setLinks([]);
+        await browser.storage.local.set({ links_cache: [] });
+        setIsConfigured(false);
+      }
+      
       setShowSettings(false);
-      setStatus({ message: "URL saved!", type: "success" });
+      setStatus({ message: "Settings saved!", type: "success" });
     } catch (err: any) {
       setStatus({ message: err.message, type: "error" });
     } finally {
@@ -267,11 +280,11 @@ export default function App() {
                 <input placeholder="https://cloud.com/remote.php/dav/files/user/" value={config.url} onChange={(e) => setConfig({ ...config, url: e.target.value })} className="w-full px-3 py-2 text-sm border bg-card rounded-lg focus:ring-2 focus:ring-primary/20 outline-none border-border" />
                 
                 <div className="grid grid-cols-2 gap-2">
-                  <button onClick={testConnection} disabled={testingConnection || loading || !config.url} className="flex items-center justify-center gap-2 py-2 border border-border text-foreground rounded-lg font-semibold hover:bg-muted transition-all cursor-pointer disabled:opacity-50">
+                  <button onClick={testConnection} disabled={testingConnection || loading || !isUrlValid} className="flex items-center justify-center gap-2 py-2 border border-border text-foreground rounded-lg font-semibold hover:bg-muted transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                     <Wifi className={`w-4 h-4 ${testingConnection ? 'animate-pulse' : ''}`} /> Test
                   </button>
-                  <button onClick={handleSaveSettings} disabled={loading || testingConnection || !config.url} className="py-2 bg-primary text-primary-foreground rounded-lg font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 cursor-pointer disabled:opacity-50">
-                    Save URL
+                  <button onClick={handleSaveSettings} disabled={loading || testingConnection} className="py-2 bg-primary text-primary-foreground rounded-lg font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 cursor-pointer disabled:opacity-50">
+                    {loading ? "Saving..." : "Save"}
                   </button>
                 </div>
               </div>
@@ -280,7 +293,7 @@ export default function App() {
                 <a 
                   href={nextcloudBaseUrl || "#"} 
                   target="_blank" 
-                  className={`flex items-center justify-center gap-2 py-2 border border-border text-foreground rounded-lg text-xs font-semibold hover:bg-muted transition-all cursor-pointer ${!nextcloudBaseUrl ? 'opacity-50 pointer-events-none' : ''}`}
+                  className={`flex items-center justify-center gap-2 py-2 border border-border text-foreground rounded-lg text-xs font-semibold hover:bg-muted transition-all cursor-pointer ${!nextcloudBaseUrl ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
                 >
                   <LogIn className="w-3.5 h-3.5" /> Nextcloud Login
                 </a>
