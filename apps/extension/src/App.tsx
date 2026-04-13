@@ -168,6 +168,27 @@ export default function App() {
     }
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+
+    if (diffInDays < 1) {
+      const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+      if (diffInHours < 1) {
+        const diffInMins = Math.floor(diffInMs / (1000 * 60));
+        return diffInMins <= 1 ? "Just now" : `${diffInMins}m ago`;
+      }
+      return `${diffInHours}h ago`;
+    }
+    
+    if (diffInDays < 2) return "Yesterday";
+    
+    // Older than 2 days: YYYY-MM-DD
+    return date.toISOString().split("T")[0];
+  };
+
   const processedLinks = useMemo(() => {
     let result = [...links];
     if (filter === "read") result = result.filter(l => l.isRead);
@@ -275,10 +296,13 @@ export default function App() {
                       <h3 className={`text-[11px] font-bold truncate ${link.isRead ? 'line-through text-slate-500' : 'text-slate-800'}`}>{link.title}</h3>
                       <p className="text-[9px] text-slate-400 truncate mt-0.5 font-mono">{link.url}</p>
                     </div>
-                    <div className="flex items-center justify-end gap-3 pt-2 mt-1 border-t border-slate-100">
-                      <a href={link.url} target="_blank" className="p-1 text-slate-400 hover:text-primary transition-colors cursor-pointer"><ExternalLink className="w-3.5 h-3.5" /></a>
-                      <button onClick={() => handleToggleRead(link.id, link.isRead)} className={`p-1 transition-colors cursor-pointer ${link.isRead ? 'text-green-600' : 'text-slate-400 hover:text-green-600'}`}><CheckCircle2 className="w-3.5 h-3.5" /></button>
-                      <button onClick={() => handleDeleteLink(link.id)} className="p-1 text-slate-400 hover:text-red-500 transition-colors cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
+                    <div className="flex items-center justify-between pt-2 mt-1 border-t border-slate-100">
+                      <span className="text-[9px] text-slate-400 font-medium">{formatDate(link.addedAt)}</span>
+                      <div className="flex items-center gap-3">
+                        <a href={link.url} target="_blank" className="p-1 text-slate-400 hover:text-primary transition-colors cursor-pointer"><ExternalLink className="w-3.5 h-3.5" /></a>
+                        <button onClick={() => handleToggleRead(link.id, link.isRead)} className={`p-1 transition-colors cursor-pointer ${link.isRead ? 'text-green-600' : 'text-slate-400 hover:text-green-600'}`}><CheckCircle2 className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => handleDeleteLink(link.id)} className="p-1 text-slate-400 hover:text-red-500 transition-colors cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </div>
                     </div>
                   </div>
                 ))
