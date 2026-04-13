@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from "react";
 import browser from "webextension-polyfill";
 import { LinkKeepClient, WebDAVConfig, Link } from "@linkkeep/core";
-import { Settings, Save, CheckCircle2, AlertCircle, Link2, ExternalLink, Trash2, RefreshCw, CheckCheck, Wifi } from "lucide-react";
+import { Settings, Save, CheckCircle2, AlertCircle, Link2, ExternalLink, Trash2, RefreshCw, CheckCheck, Wifi, Moon, Sun, Monitor } from "lucide-react";
 
 type FilterType = "all" | "read" | "unread";
 type SortType = "newest" | "oldest" | "alpha";
+type ThemeType = "system" | "light" | "dark";
 
 export default function App() {
   const [config, setConfig] = useState<WebDAVConfig>({ url: "", username: "", password: "" });
@@ -17,6 +18,7 @@ export default function App() {
   
   const [filter, setFilter] = useState<FilterType>("all");
   const [sortBy, setSortBy] = useState<SortType>("newest");
+  const [theme, setTheme] = useState<ThemeType>("system");
 
   const [status, setStatus] = useState<{ message: string; type: "success" | "error" | "info" | null }>({
     message: "",
@@ -37,12 +39,14 @@ export default function App() {
           "webdav_pass", 
           "links_cache",
           "pref_filter",
-          "pref_sortBy"
+          "pref_sortBy",
+          "pref_theme"
         ]);
         
         if (result.links_cache) setLinks(result.links_cache as Link[]);
         if (result.pref_filter) setFilter(result.pref_filter as FilterType);
         if (result.pref_sortBy) setSortBy(result.pref_sortBy as SortType);
+        if (result.pref_theme) setTheme(result.pref_theme as ThemeType);
 
         if (result.webdav_url && result.webdav_user) {
           const loadedConfig: WebDAVConfig = {
@@ -71,6 +75,21 @@ export default function App() {
     init();
   }, []);
 
+  // Theme application
+  useEffect(() => {
+    const root = window.document.documentElement;
+    const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    
+    if (isDark) {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+    
+    browser.storage.local.set({ pref_theme: theme });
+  }, [theme]);
+
+  // Persist filter and sort changes
   useEffect(() => {
     browser.storage.local.set({ pref_filter: filter, pref_sortBy: sortBy });
   }, [filter, sortBy]);
@@ -184,8 +203,6 @@ export default function App() {
     }
     
     if (diffInDays < 2) return "Yesterday";
-    
-    // Older than 2 days: YYYY-MM-DD
     return date.toISOString().split("T")[0];
   };
 
@@ -205,66 +222,76 @@ export default function App() {
   const hasUnread = useMemo(() => links.some(l => !l.isRead), [links]);
 
   return (
-    <div className="w-[360px] min-h-[500px] max-h-[600px] bg-background text-foreground antialiased flex flex-col overflow-x-hidden">
-      <header className="px-4 py-3 border-b flex items-center justify-between bg-white sticky top-0 z-10 shadow-sm">
+    <div className="w-[360px] min-h-[500px] max-h-[600px] bg-background text-foreground antialiased flex flex-col overflow-x-hidden transition-colors duration-300">
+      <header className="px-4 py-3 border-b flex items-center justify-between bg-card sticky top-0 z-10 shadow-sm">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-md shadow-primary/20">
             <Link2 className="text-white w-5 h-5" />
           </div>
-          <h1 className="font-bold text-lg tracking-tight text-slate-800">LinkKeep</h1>
+          <h1 className="font-bold text-lg tracking-tight">LinkKeep</h1>
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={() => fetchLinks(config)} className={`p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer disabled:cursor-default ${loading ? 'animate-spin' : ''}`} disabled={loading || !isConfigured}>
-            <RefreshCw className="w-4 h-4 text-slate-500" />
+          <button onClick={() => fetchLinks(config)} className={`p-2 hover:bg-muted rounded-full transition-colors cursor-pointer disabled:cursor-default ${loading ? 'animate-spin' : ''}`} disabled={loading || !isConfigured}>
+            <RefreshCw className="w-4 h-4 text-muted-foreground" />
           </button>
-          <button onClick={() => setShowSettings(!showSettings)} className={`p-2 rounded-full transition-colors cursor-pointer ${showSettings ? 'bg-primary/10 text-primary' : 'hover:bg-slate-100 text-slate-500'}`}>
+          <button onClick={() => setShowSettings(!showSettings)} className={`p-2 rounded-full transition-colors cursor-pointer ${showSettings ? 'bg-primary/10 text-primary' : 'hover:bg-muted text-muted-foreground'}`}>
             <Settings className="w-5 h-5" />
           </button>
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col overflow-hidden bg-slate-50/30">
+      <main className="flex-1 flex flex-col overflow-hidden bg-background">
         {showSettings ? (
-          <div className="p-4 space-y-4 animate-in fade-in slide-in-from-top-2">
-            <h2 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Settings</h2>
-            <div className="space-y-3">
-              <input placeholder="WebDAV URL" value={config.url} onChange={(e) => setConfig({ ...config, url: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none" />
-              <input placeholder="Username" value={config.username} onChange={(e) => setConfig({ ...config, username: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none" />
-              <input type="password" placeholder="App Password" value={config.password} onChange={(e) => setConfig({ ...config, password: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none" />
-              
-              <div className="grid grid-cols-2 gap-2 pt-2">
-                <button 
-                  onClick={testConnection}
-                  disabled={testingConnection || !config.url || !config.username}
-                  className="flex items-center justify-center gap-2 py-2.5 border border-slate-200 text-slate-600 rounded-lg font-semibold hover:bg-slate-100 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-default"
-                >
-                  <Wifi className={`w-4 h-4 ${testingConnection ? 'animate-pulse' : ''}`} />
-                  Test
-                </button>
-                <button 
-                  onClick={async () => {
+          <div className="p-4 space-y-6 animate-in fade-in slide-in-from-top-2 overflow-y-auto">
+            <section className="space-y-3">
+              <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">WebDAV Connection</h2>
+              <div className="space-y-3">
+                <input placeholder="WebDAV URL" value={config.url} onChange={(e) => setConfig({ ...config, url: e.target.value })} className="w-full px-3 py-2 text-sm border bg-card rounded-lg focus:ring-2 focus:ring-primary/20 outline-none border-border" />
+                <input placeholder="Username" value={config.username} onChange={(e) => setConfig({ ...config, username: e.target.value })} className="w-full px-3 py-2 text-sm border bg-card rounded-lg focus:ring-2 focus:ring-primary/20 outline-none border-border" />
+                <input type="password" placeholder="App Password" value={config.password} onChange={(e) => setConfig({ ...config, password: e.target.value })} className="w-full px-3 py-2 text-sm border bg-card rounded-lg focus:ring-2 focus:ring-primary/20 outline-none border-border" />
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={testConnection} disabled={testingConnection || !config.url || !config.username} className="flex items-center justify-center gap-2 py-2 border border-border text-foreground rounded-lg font-semibold hover:bg-muted transition-all cursor-pointer disabled:opacity-50">
+                    <Wifi className={`w-4 h-4 ${testingConnection ? 'animate-pulse' : ''}`} /> Test
+                  </button>
+                  <button onClick={async () => {
                     await browser.storage.local.set({ webdav_url: config.url, webdav_user: config.username, webdav_pass: config.password });
                     setIsConfigured(true); setShowSettings(false); fetchLinks(config);
-                  }} 
-                  className="py-2.5 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 cursor-pointer"
-                >
-                  Save
-                </button>
+                  }} className="py-2 bg-primary text-primary-foreground rounded-lg font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 cursor-pointer">Save</button>
+                </div>
               </div>
-            </div>
+            </section>
+
+            <section className="space-y-3 border-t pt-4">
+              <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Appearance</h2>
+              <div className="flex bg-muted p-1 rounded-xl">
+                {(["system", "light", "dark"] as ThemeType[]).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setTheme(t)}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${theme === t ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    {t === "system" && <Monitor className="w-3.5 h-3.5" />}
+                    {t === "light" && <Sun className="w-3.5 h-3.5" />}
+                    {t === "dark" && <Moon className="w-3.5 h-3.5" />}
+                    <span className="capitalize">{t}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
           </div>
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="px-4 py-2 bg-slate-100 border-b flex items-center justify-between gap-2">
+            <div className="px-4 py-2 bg-muted/50 border-b border-border flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 flex-1 overflow-x-auto no-scrollbar">
                 {(["all", "unread", "read"] as FilterType[]).map(f => (
-                  <button key={f} onClick={() => setFilter(f)} className={`px-2.5 py-1 rounded-full text-[10px] font-bold capitalize transition-all whitespace-nowrap cursor-pointer ${filter === f ? 'bg-primary text-white' : 'bg-white text-slate-500 border'}`}>
+                  <button key={f} onClick={() => setFilter(f)} className={`px-2.5 py-1 rounded-full text-[10px] font-bold capitalize transition-all whitespace-nowrap cursor-pointer ${filter === f ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-card text-muted-foreground border border-border hover:bg-muted'}`}>
                     {f}
                   </button>
                 ))}
               </div>
-              <div className="flex items-center gap-1 border-l pl-2 border-slate-300">
-                <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortType)} className="text-[10px] font-bold text-slate-500 bg-transparent outline-none cursor-pointer">
+              <div className="flex items-center gap-1 border-l border-border pl-2">
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortType)} className="text-[10px] font-bold text-muted-foreground bg-transparent outline-none cursor-pointer">
                   <option value="newest">Newest</option>
                   <option value="oldest">Oldest</option>
                   <option value="alpha">A-Z</option>
@@ -274,13 +301,13 @@ export default function App() {
 
             <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
               <div className="flex items-center justify-between mb-2">
-                <h2 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Recent Links</h2>
+                <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-1">Recent Links</h2>
                 {links.length > 0 && (
                   <div className="flex items-center gap-2">
-                    <button onClick={handleMarkAllRead} disabled={!hasUnread} className={`transition-colors cursor-pointer disabled:cursor-default ${!hasUnread ? 'text-slate-200' : 'text-slate-400 hover:text-green-600'}`} title="Mark all as read">
+                    <button onClick={handleMarkAllRead} disabled={!hasUnread} className={`transition-colors cursor-pointer disabled:cursor-default ${!hasUnread ? 'text-muted/30' : 'text-muted-foreground hover:text-green-500'}`} title="Mark all as read">
                       <CheckCheck className="w-3.5 h-3.5" />
                     </button>
-                    <button onClick={handleDeleteAll} className="text-slate-400 hover:text-red-600 transition-colors cursor-pointer" title="Delete all">
+                    <button onClick={handleDeleteAll} className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer" title="Delete all">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -288,20 +315,20 @@ export default function App() {
               </div>
               
               {processedLinks.length === 0 ? (
-                <div className="py-12 text-center text-slate-400 text-xs italic">No matching links found</div>
+                <div className="py-12 text-center text-muted-foreground text-xs italic">No matching links found</div>
               ) : (
                 processedLinks.map((link) => (
-                  <div key={link.id} className={`p-3 rounded-xl border flex flex-col gap-2 transition-all group ${link.isRead ? 'bg-slate-200/50 opacity-60' : 'bg-white shadow-sm border-slate-200 hover:border-primary/30'}`}>
+                  <div key={link.id} className={`p-3 rounded-xl border flex flex-col gap-2 transition-all group ${link.isRead ? 'bg-muted/30 opacity-60' : 'bg-card shadow-sm border-border hover:border-primary/30'}`}>
                     <div className="flex-1 min-w-0">
-                      <h3 className={`text-[11px] font-bold truncate ${link.isRead ? 'line-through text-slate-500' : 'text-slate-800'}`}>{link.title}</h3>
-                      <p className="text-[9px] text-slate-400 truncate mt-0.5 font-mono">{link.url}</p>
+                      <h3 className={`text-[11px] font-bold truncate ${link.isRead ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{link.title}</h3>
+                      <p className="text-[9px] text-muted-foreground truncate mt-0.5 font-mono">{link.url}</p>
                     </div>
-                    <div className="flex items-center justify-between pt-2 mt-1 border-t border-slate-100">
-                      <span className="text-[9px] text-slate-400 font-medium">{formatDate(link.addedAt)}</span>
+                    <div className="flex items-center justify-between pt-2 mt-1 border-t border-border/50">
+                      <span className="text-[9px] text-muted-foreground font-medium">{formatDate(link.addedAt)}</span>
                       <div className="flex items-center gap-3">
-                        <a href={link.url} target="_blank" className="p-1 text-slate-400 hover:text-primary transition-colors cursor-pointer"><ExternalLink className="w-3.5 h-3.5" /></a>
-                        <button onClick={() => handleToggleRead(link.id, link.isRead)} className={`p-1 transition-colors cursor-pointer ${link.isRead ? 'text-green-600' : 'text-slate-400 hover:text-green-600'}`}><CheckCircle2 className="w-3.5 h-3.5" /></button>
-                        <button onClick={() => handleDeleteLink(link.id)} className="p-1 text-slate-400 hover:text-red-500 transition-colors cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
+                        <a href={link.url} target="_blank" className="p-1 text-muted-foreground hover:text-primary transition-colors cursor-pointer"><ExternalLink className="w-3.5 h-3.5" /></a>
+                        <button onClick={() => handleToggleRead(link.id, link.isRead)} className={`p-1 transition-colors cursor-pointer ${link.isRead ? 'text-green-500' : 'text-muted-foreground hover:text-green-500'}`}><CheckCircle2 className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => handleDeleteLink(link.id)} className="p-1 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
                     </div>
                   </div>
@@ -309,17 +336,17 @@ export default function App() {
               )}
             </div>
 
-            <div className="p-4 border-t bg-white shadow-up">
-              <div className={`p-3 rounded-xl border transition-all mb-3 ${isAlreadySavedAndUnread ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'}`}>
+            <div className="p-4 border-t border-border bg-card shadow-lg">
+              <div className={`p-3 rounded-xl border transition-all mb-3 ${isAlreadySavedAndUnread ? 'bg-primary/5 border-primary/20' : 'bg-muted/30 border-border'}`}>
                 <div className="flex items-start gap-2.5">
-                  <div className={`p-1.5 rounded-lg border shadow-sm ${isAlreadySavedAndUnread ? 'bg-white text-green-500 border-green-200' : 'bg-white text-primary border-slate-200'}`}>
+                  <div className={`p-1.5 rounded-lg border shadow-sm ${isAlreadySavedAndUnread ? 'bg-primary text-primary-foreground border-primary/20' : 'bg-card text-primary border-border'}`}>
                     {isAlreadySavedAndUnread ? <CheckCheck className="w-3.5 h-3.5" /> : <Link2 className="w-3.5 h-3.5" />}
                   </div>
                   <div className="flex-1 overflow-hidden">
-                    <p className={`text-[9px] font-bold uppercase mb-0.5 ${isAlreadySavedAndUnread ? 'text-green-600' : 'text-slate-400'}`}>
+                    <p className={`text-[9px] font-bold uppercase mb-0.5 ${isAlreadySavedAndUnread ? 'text-primary' : 'text-muted-foreground'}`}>
                       {isAlreadySavedAndUnread ? "Already Saved" : "Current Tab"}
                     </p>
-                    <h3 className="text-[11px] font-bold truncate text-slate-800 leading-none">{currentTab.title || "---"}</h3>
+                    <h3 className="text-[11px] font-bold truncate text-foreground leading-none">{currentTab.title || "---"}</h3>
                   </div>
                 </div>
               </div>
@@ -328,11 +355,11 @@ export default function App() {
                 onClick={saveCurrentLink}
                 disabled={status.type === "info" || !isConfigured || isAlreadySavedAndUnread}
                 className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all shadow-lg active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 cursor-pointer disabled:cursor-default ${
-                  isAlreadySavedAndUnread ? 'bg-green-500 text-white shadow-green-200' : 'bg-primary text-white shadow-primary/20 hover:bg-primary/90'
+                  isAlreadySavedAndUnread ? 'bg-muted text-muted-foreground shadow-none border border-border' : 'bg-primary text-primary-foreground shadow-primary/20 hover:bg-primary/90'
                 }`}
               >
                 {isAlreadySavedAndUnread ? <CheckCircle2 className="w-5 h-5" /> : <Save className="w-5 h-5" />}
-                {isAlreadySavedAndUnread ? "Saved & Unread" : "Keep this Link"}
+                {isAlreadySavedAndUnread ? "In your Collection" : "Keep this Link"}
               </button>
             </div>
           </div>
@@ -340,7 +367,7 @@ export default function App() {
       </main>
 
       {status.message && (
-        <footer className={`px-4 py-2 text-[10px] flex items-center gap-2 border-t ${status.type === "error" ? "bg-red-50 text-red-600 border-red-100" : status.type === "success" ? "bg-green-50 text-green-700 border-green-100" : "bg-slate-50 text-slate-500"}`}>
+        <footer className={`px-4 py-2 text-[10px] flex items-center gap-2 border-t border-border ${status.type === "error" ? "bg-destructive/10 text-destructive" : status.type === "success" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
           <span className="font-bold">{status.message}</span>
         </footer>
       )}
