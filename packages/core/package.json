@@ -1,0 +1,27 @@
+{
+  "name": "@linkkeep/core",
+  "version": "1.0.0",
+  "description": "Core logic for LinkKeep WebDAV synchronization",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src/**"
+  },
+  "keywords": [
+    "linkkeep",
+    "webdav",
+    "nextcloud",
+    "sync"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "webdav": "^5.9.0",
+    "zod": "^3.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

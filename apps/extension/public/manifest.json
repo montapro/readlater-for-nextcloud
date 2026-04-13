@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "LinkKeep",
+  "version": "1.0.0",
+  "description": "Save links to your Nextcloud via WebDAV.",
+  "action": {
+    "default_popup": "index.html"
+  },
+  "permissions": [
+    "storage",
+    "tabs",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ]
+}
