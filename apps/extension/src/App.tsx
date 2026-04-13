@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import browser from "webextension-polyfill";
 import { LinkKeepClient, WebDAVConfig, Link } from "@linkkeep/core";
-import { Settings, Save, CheckCircle2, AlertCircle, Link2, ExternalLink, Trash2, RefreshCw, Filter, SortAsc } from "lucide-react";
+import { Settings, Save, CheckCircle2, AlertCircle, Link2, ExternalLink, Trash2, RefreshCw } from "lucide-react";
 
 type FilterType = "all" | "read" | "unread";
 type SortType = "newest" | "oldest" | "alpha";
@@ -14,7 +14,6 @@ export default function App() {
   const [links, setLinks] = useState<Link[]>([]);
   const [loading, setLoading] = useState(false);
   
-  // Filter & Sort States
   const [filter, setFilter] = useState<FilterType>("all");
   const [sortBy, setSortBy] = useState<SortType>("newest");
 
@@ -23,7 +22,6 @@ export default function App() {
     type: null,
   });
 
-  // Check if current tab is already in the list
   const isAlreadySaved = useMemo(() => {
     if (!currentTab.url) return false;
     return links.some(l => l.url === currentTab.url);
@@ -31,8 +29,15 @@ export default function App() {
 
   useEffect(() => {
     async function init() {
+      // Load initial data and cache
       try {
-        const result = await browser.storage.local.get(["webdav_url", "webdav_user", "webdav_pass"]);
+        const result = await browser.storage.local.get(["webdav_url", "webdav_user", "webdav_pass", "links_cache"]);
+        
+        // Show cached links immediately for better UX
+        if (result.links_cache) {
+          setLinks(result.links_cache as Link[]);
+        }
+
         if (result.webdav_url && result.webdav_user) {
           const loadedConfig: WebDAVConfig = {
             url: result.webdav_url as string,
@@ -61,22 +66,18 @@ export default function App() {
     init();
   }, []);
 
-  // Update extension badge/color when isAlreadySaved changes
-  useEffect(() => {
-    if (isAlreadySaved) {
-      browser.action.setBadgeBackgroundColor({ color: "#10b981" }); // Green
-      browser.action.setBadgeText({ text: "✓" });
-    } else {
-      browser.action.setBadgeText({ text: "" });
-    }
-  }, [isAlreadySaved]);
-
   const fetchLinks = async (cfg: WebDAVConfig) => {
     setLoading(true);
     try {
       const client = new LinkKeepClient(cfg);
       const store = await client.fetchLinks();
       setLinks(store.links);
+      
+      // Update cache
+      await browser.storage.local.set({ links_cache: store.links });
+      // Notify background script to update badge
+      browser.runtime.sendMessage({ type: "SYNC_LINKS" });
+      
     } catch (error) {
       setStatus({ message: "Sync failed.", type: "error" });
     } finally {
@@ -95,7 +96,7 @@ export default function App() {
         tags: [],
       });
       setStatus({ message: "Saved!", type: "success" });
-      fetchLinks(config);
+      await fetchLinks(config);
     } catch (error: any) {
       setStatus({ message: error.message || "Failed to save.", type: "error" });
     }
@@ -105,7 +106,7 @@ export default function App() {
     try {
       const client = new LinkKeepClient(config);
       await client.updateLink(id, { isRead: !isRead });
-      fetchLinks(config);
+      await fetchLinks(config);
     } catch (error) {
       setStatus({ message: "Update failed.", type: "error" });
     }
@@ -116,28 +117,22 @@ export default function App() {
     try {
       const client = new LinkKeepClient(config);
       await client.deleteLink(id);
-      fetchLinks(config);
+      await fetchLinks(config);
     } catch (error) {
       setStatus({ message: "Delete failed.", type: "error" });
     }
   };
 
-  // Filter & Sort Logic
   const processedLinks = useMemo(() => {
     let result = [...links];
-
-    // Filter
     if (filter === "read") result = result.filter(l => l.isRead);
     if (filter === "unread") result = result.filter(l => !l.isRead);
-
-    // Sort
     result.sort((a, b) => {
       if (sortBy === "newest") return new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime();
       if (sortBy === "oldest") return new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime();
       if (sortBy === "alpha") return a.title.localeCompare(b.title);
       return 0;
     });
-
     return result;
   }, [links, filter, sortBy]);
 
@@ -180,7 +175,6 @@ export default function App() {
           </div>
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Filter & Sort Bar */}
             <div className="px-4 py-2 bg-slate-50 border-b flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 flex-1 overflow-x-auto no-scrollbar">
                 {(["all", "unread", "read"] as FilterType[]).map(f => (
@@ -198,7 +192,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* List */}
             <div className="flex-1 overflow-y-auto p-4 space-y-2 pr-1 custom-scrollbar bg-slate-50/30">
               {processedLinks.length === 0 ? (
                 <div className="py-12 text-center text-slate-400 text-xs italic">No matching links found</div>
@@ -219,8 +212,7 @@ export default function App() {
               )}
             </div>
 
-            {/* Bottom Section */}
-            <div className="p-4 border-t bg-white">
+            <div className="p-4 border-t bg-white shadow-up">
               <div className={`p-3 rounded-xl border transition-all mb-3 ${isAlreadySaved ? 'bg-green-50 border-green-100' : 'bg-slate-50 border-slate-100'}`}>
                 <div className="flex items-start gap-2.5">
                   <div className={`p-1.5 rounded-lg border shadow-sm ${isAlreadySaved ? 'bg-white text-green-500 border-green-200' : 'bg-white text-primary border-slate-200'}`}>
