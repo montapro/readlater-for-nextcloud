@@ -10,7 +10,6 @@ async function updateTabBadge(tabId: number, url?: string) {
     return;
   }
 
-  // Use cached links from storage to avoid WebDAV overhead on every tab change
   const data = await browser.storage.local.get(["links_cache"]);
   const links = (data.links_cache as Link[]) || [];
   
@@ -24,20 +23,9 @@ async function updateTabBadge(tabId: number, url?: string) {
   }
 }
 
-// Listen for tab updates (loading new page, typing URL)
-browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === "complete" || changeInfo.url) {
-    updateTabBadge(tabId, tab.url);
-  }
-});
-
-// Listen for tab activation (switching between existing tabs)
-browser.tabs.onActivated.addListener(async (activeInfo) => {
-  const tab = await browser.tabs.get(activeInfo.tabId);
-  updateTabBadge(activeInfo.tabId, tab.url);
-});
-
-// Periodic background sync
+/**
+ * Syncs links from WebDAV and updates the cache.
+ */
 async function syncLinks() {
   const data = await browser.storage.local.get(["webdav_url", "webdav_user", "webdav_pass"]);
   if (data.webdav_url && data.webdav_user) {
@@ -50,10 +38,8 @@ async function syncLinks() {
       const client = new LinkKeepClient(config);
       const store = await client.fetchLinks();
       
-      // Store in cache
       await browser.storage.local.set({ links_cache: store.links });
       
-      // Update badge for current tab after sync
       const tabs = await browser.tabs.query({ active: true, currentWindow: true });
       const activeTab = tabs[0];
       if (activeTab?.id) {
@@ -65,11 +51,38 @@ async function syncLinks() {
   }
 }
 
-// Sync on startup/install
+// Listen for tab changes
+browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === "complete" || changeInfo.url) {
+    updateTabBadge(tabId, tab.url);
+  }
+});
+
+browser.tabs.onActivated.addListener(async (activeInfo) => {
+  const tab = await browser.tabs.get(activeInfo.tabId);
+  updateTabBadge(activeInfo.tabId, tab.url);
+});
+
+// REAKTIVITÄT: Auf Speicheränderungen reagieren
+browser.storage.onChanged.addListener((changes) => {
+  // Wenn sich Zugangsdaten ändern, sofort neu syncen
+  if (changes.webdav_url || changes.webdav_user || changes.webdav_pass) {
+    syncLinks();
+  }
+  // Wenn sich der Cache ändert, Badge für den aktuellen Tab aktualisieren
+  if (changes.links_cache) {
+    browser.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
+      const activeTab = tabs[0];
+      if (activeTab?.id) {
+        updateTabBadge(activeTab.id, activeTab.url);
+      }
+    });
+  }
+});
+
 browser.runtime.onInstalled.addListener(() => syncLinks());
 browser.runtime.onStartup.addListener(() => syncLinks());
 
-// Listen for messages from the popup
 browser.runtime.onMessage.addListener((message: any) => {
   if (message.type === "SYNC_LINKS") {
     syncLinks();

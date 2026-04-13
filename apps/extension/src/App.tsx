@@ -75,21 +75,13 @@ export default function App() {
     init();
   }, []);
 
-  // Theme application
   useEffect(() => {
     const root = window.document.documentElement;
     const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-    
-    if (isDark) {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-    
+    if (isDark) root.classList.add("dark"); else root.classList.remove("dark");
     browser.storage.local.set({ pref_theme: theme });
   }, [theme]);
 
-  // Persist filter and sort changes
   useEffect(() => {
     browser.storage.local.set({ pref_filter: filter, pref_sortBy: sortBy });
   }, [filter, sortBy]);
@@ -101,9 +93,8 @@ export default function App() {
       const store = await client.fetchLinks();
       setLinks(store.links);
       await browser.storage.local.set({ links_cache: store.links });
-      browser.runtime.sendMessage({ type: "SYNC_LINKS" });
     } catch (error) {
-      setStatus({ message: "Sync failed.", type: "error" });
+      setStatus({ message: "Sync failed. Check settings.", type: "error" });
     } finally {
       setLoading(false);
     }
@@ -124,6 +115,35 @@ export default function App() {
       setStatus({ message: "Test failed. Check URL and CORS.", type: "error" });
     } finally {
       setTestingConnection(false);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    setLoading(true);
+    setStatus({ message: "Saving and syncing...", type: "info" });
+    try {
+      // 1. In Storage speichern
+      await browser.storage.local.set({ 
+        webdav_url: config.url, 
+        webdav_user: config.username, 
+        webdav_pass: config.password 
+      });
+      
+      // 2. Direkt versuchen zu syncen
+      const client = new LinkKeepClient(config);
+      const store = await client.fetchLinks();
+      
+      // 3. Wenn erfolgreich: Cache und State updaten
+      setLinks(store.links);
+      await browser.storage.local.set({ links_cache: store.links });
+      
+      setIsConfigured(true);
+      setShowSettings(false);
+      setStatus({ message: "Settings saved!", type: "success" });
+    } catch (err) {
+      setStatus({ message: "Save failed: Could not connect with these credentials.", type: "error" });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -192,7 +212,6 @@ export default function App() {
     const now = new Date();
     const diffInMs = now.getTime() - date.getTime();
     const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
-
     if (diffInDays < 1) {
       const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
       if (diffInHours < 1) {
@@ -201,7 +220,6 @@ export default function App() {
       }
       return `${diffInHours}h ago`;
     }
-    
     if (diffInDays < 2) return "Yesterday";
     return date.toISOString().split("T")[0];
   };
@@ -223,7 +241,7 @@ export default function App() {
 
   return (
     <div className="w-[360px] min-h-[500px] max-h-[600px] bg-background text-foreground antialiased flex flex-col overflow-x-hidden transition-colors duration-300">
-      <header className="px-4 py-3 border-b flex items-center justify-between bg-card sticky top-0 z-10 shadow-sm">
+      <header className="px-4 py-3 border-b flex items-center justify-between bg-card sticky top-0 z-10 shadow-sm border-border">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-md shadow-primary/20">
             <Link2 className="text-white w-5 h-5" />
@@ -251,26 +269,21 @@ export default function App() {
                 <input type="password" placeholder="App Password" value={config.password} onChange={(e) => setConfig({ ...config, password: e.target.value })} className="w-full px-3 py-2 text-sm border bg-card rounded-lg focus:ring-2 focus:ring-primary/20 outline-none border-border" />
                 
                 <div className="grid grid-cols-2 gap-2">
-                  <button onClick={testConnection} disabled={testingConnection || !config.url || !config.username} className="flex items-center justify-center gap-2 py-2 border border-border text-foreground rounded-lg font-semibold hover:bg-muted transition-all cursor-pointer disabled:opacity-50">
+                  <button onClick={testConnection} disabled={testingConnection || loading || !config.url || !config.username} className="flex items-center justify-center gap-2 py-2 border border-border text-foreground rounded-lg font-semibold hover:bg-muted transition-all cursor-pointer disabled:opacity-50">
                     <Wifi className={`w-4 h-4 ${testingConnection ? 'animate-pulse' : ''}`} /> Test
                   </button>
-                  <button onClick={async () => {
-                    await browser.storage.local.set({ webdav_url: config.url, webdav_user: config.username, webdav_pass: config.password });
-                    setIsConfigured(true); setShowSettings(false); fetchLinks(config);
-                  }} className="py-2 bg-primary text-primary-foreground rounded-lg font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 cursor-pointer">Save</button>
+                  <button onClick={handleSaveSettings} disabled={loading || testingConnection} className="py-2 bg-primary text-primary-foreground rounded-lg font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 cursor-pointer disabled:opacity-50">
+                    {loading ? "Saving..." : "Save"}
+                  </button>
                 </div>
               </div>
             </section>
 
-            <section className="space-y-3 border-t pt-4">
+            <section className="space-y-3 border-t border-border pt-4">
               <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Appearance</h2>
               <div className="flex bg-muted p-1 rounded-xl">
                 {(["system", "light", "dark"] as ThemeType[]).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setTheme(t)}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${theme === t ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                  >
+                  <button key={t} onClick={() => setTheme(t)} className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${theme === t ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
                     {t === "system" && <Monitor className="w-3.5 h-3.5" />}
                     {t === "light" && <Sun className="w-3.5 h-3.5" />}
                     {t === "dark" && <Moon className="w-3.5 h-3.5" />}
@@ -353,7 +366,7 @@ export default function App() {
 
               <button
                 onClick={saveCurrentLink}
-                disabled={status.type === "info" || !isConfigured || isAlreadySavedAndUnread}
+                disabled={status.type === "info" || loading || !isConfigured || isAlreadySavedAndUnread}
                 className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all shadow-lg active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 cursor-pointer disabled:cursor-default ${
                   isAlreadySavedAndUnread ? 'bg-muted text-muted-foreground shadow-none border border-border' : 'bg-primary text-primary-foreground shadow-primary/20 hover:bg-primary/90'
                 }`}
