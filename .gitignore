@@ -25,6 +25,7 @@ Thumbs.db
 .idea
 *.swp
 *.swo
+*.zip
 
 # Logs
 npm-debug.log*
