@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useMemo } from "react";
 import browser from "webextension-polyfill";
 import { LinkKeepClient, WebDAVConfig, Link } from "@linkkeep/core";
-import { Settings, Save, CheckCircle2, AlertCircle, Link2, ExternalLink, Trash2, RefreshCw, CheckCheck, Wifi, Moon, Sun, Monitor, LogIn, BookOpen } from "lucide-react";
+import { Settings, Save, CheckCircle2, AlertCircle, Link2, ExternalLink, Trash2, RefreshCw, CheckCheck, Wifi, Moon, Sun, Monitor, LogIn, BookOpen, User, Lock } from "lucide-react";
 
 type FilterType = "all" | "read" | "unread";
 type SortType = "newest" | "oldest" | "alpha";
 type ThemeType = "system" | "light" | "dark";
 
 export default function App() {
-  const [config, setConfig] = useState<WebDAVConfig>({ url: "" });
+  const [config, setConfig] = useState<WebDAVConfig>({ url: "", username: "", password: "" });
   const [isConfigured, setIsConfigured] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [currentTab, setCurrentTab] = useState<{ url?: string; title?: string }>({});
@@ -34,22 +34,13 @@ export default function App() {
     return config.url && config.url.trim().startsWith("https://");
   }, [config.url]);
 
-  // Extract base Nextcloud URL for login button
-  const nextcloudBaseUrl = useMemo(() => {
-    if (!isUrlValid) return null;
-    try {
-      const url = new URL(config.url);
-      return `${url.protocol}//${url.host}`;
-    } catch (e) {
-      return null;
-    }
-  }, [config.url, isUrlValid]);
-
   useEffect(() => {
     async function init() {
       try {
         const result = await browser.storage.local.get([
           "webdav_url", 
+          "webdav_user",
+          "webdav_pass",
           "links_cache",
           "pref_filter",
           "pref_sortBy",
@@ -64,6 +55,8 @@ export default function App() {
         if (result.webdav_url) {
           const loadedConfig: WebDAVConfig = {
             url: result.webdav_url as string,
+            username: (result.webdav_user as string) || "",
+            password: (result.webdav_pass as string) || "",
           };
           setConfig(loadedConfig);
           setIsConfigured(true);
@@ -115,17 +108,17 @@ export default function App() {
   const testConnection = async () => {
     if (!isUrlValid) return;
     setTestingConnection(true);
-    setStatus({ message: "Checking session...", type: "info" });
+    setStatus({ message: "Testing connection...", type: "info" });
     try {
       const client = new LinkKeepClient(config);
       const ok = await client.verifyConnection();
       if (ok) {
-        setStatus({ message: "Nextcloud connected!", type: "success" });
+        setStatus({ message: "Connection successful!", type: "success" });
       } else {
-        setStatus({ message: "Access denied. Are you logged in?", type: "error" });
+        setStatus({ message: "Connection failed. Check your data.", type: "error" });
       }
     } catch (err) {
-      setStatus({ message: "Could not reach server.", type: "error" });
+      setStatus({ message: "Test failed. Check URL and credentials.", type: "error" });
     } finally {
       setTestingConnection(false);
     }
@@ -134,7 +127,11 @@ export default function App() {
   const handleSaveSettings = async () => {
     setLoading(true);
     try {
-      await browser.storage.local.set({ webdav_url: config.url });
+      await browser.storage.local.set({ 
+        webdav_url: config.url,
+        webdav_user: config.username,
+        webdav_pass: config.password
+      });
       
       if (config.url) {
         const client = new LinkKeepClient(config);
@@ -272,14 +269,22 @@ export default function App() {
         {showSettings ? (
           <div className="p-4 space-y-6 animate-in fade-in slide-in-from-top-2 overflow-y-auto">
             <section className="space-y-3">
-              <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Setup</h2>
-              <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Enter your WebDAV URL. To sync, you must be logged into your Nextcloud in this browser.
-              </p>
-              <div className="space-y-3">
-                <input placeholder="https://cloud.com/remote.php/dav/files/user/" value={config.url} onChange={(e) => setConfig({ ...config, url: e.target.value })} className="w-full px-3 py-2 text-sm border bg-card rounded-lg focus:ring-2 focus:ring-primary/20 outline-none border-border" />
+              <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Credentials</h2>
+              <div className="space-y-2">
+                <div className="relative">
+                  <Link2 className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                  <input placeholder="WebDAV URL" value={config.url} onChange={(e) => setConfig({ ...config, url: e.target.value })} className="w-full pl-9 pr-3 py-2 text-sm border bg-card rounded-lg focus:ring-2 focus:ring-primary/20 outline-none border-border font-mono text-[11px]" />
+                </div>
+                <div className="relative">
+                  <User className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                  <input placeholder="Username" value={config.username} onChange={(e) => setConfig({ ...config, username: e.target.value })} className="w-full pl-9 pr-3 py-2 text-sm border bg-card rounded-lg focus:ring-2 focus:ring-primary/20 outline-none border-border" />
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                  <input type="password" placeholder="App Password" value={config.password} onChange={(e) => setConfig({ ...config, password: e.target.value })} className="w-full pl-9 pr-3 py-2 text-sm border bg-card rounded-lg focus:ring-2 focus:ring-primary/20 outline-none border-border" />
+                </div>
                 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 pt-1">
                   <button onClick={testConnection} disabled={testingConnection || loading || !isUrlValid} className="flex items-center justify-center gap-2 py-2 border border-border text-foreground rounded-lg font-semibold hover:bg-muted transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                     <Wifi className={`w-4 h-4 ${testingConnection ? 'animate-pulse' : ''}`} /> Test
                   </button>
@@ -289,18 +294,11 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 pt-2">
-                <a 
-                  href={nextcloudBaseUrl || "#"} 
-                  target="_blank" 
-                  className={`flex items-center justify-center gap-2 py-2 border border-border text-foreground rounded-lg text-xs font-semibold hover:bg-muted transition-all cursor-pointer ${!nextcloudBaseUrl ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
-                >
-                  <LogIn className="w-3.5 h-3.5" /> Nextcloud Login
-                </a>
+              <div className="pt-2">
                 <a 
                   href="https://docs.nextcloud.com/server/latest/user_manual/en/files/access_webdav.html" 
                   target="_blank" 
-                  className="flex items-center justify-center gap-2 py-2 border border-border text-foreground rounded-lg text-xs font-semibold hover:bg-muted transition-all cursor-pointer"
+                  className="flex items-center justify-center gap-2 py-2 border border-border text-foreground rounded-lg text-xs font-semibold hover:bg-muted transition-all cursor-pointer w-full"
                 >
                   <BookOpen className="w-3.5 h-3.5" /> WebDAV Help
                 </a>
