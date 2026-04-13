@@ -125,4 +125,25 @@ export class LinkKeepClient {
     await this.saveLinks(store);
     return newLink;
   }
+
+  /**
+   * Updates an existing link.
+   */
+  async updateLink(id: string, updates: Partial<Omit<Link, "id" | "addedAt">>): Promise<void> {
+    const store = await this.fetchLinks();
+    const index = store.links.findIndex((l) => l.id === id);
+    if (index === -1) throw new Error("Link not found.");
+
+    store.links[index] = { ...store.links[index], ...updates };
+    await this.saveLinks(store);
+  }
+
+  /**
+   * Deletes a link from the store.
+   */
+  async deleteLink(id: string): Promise<void> {
+    const store = await this.fetchLinks();
+    store.links = store.links.filter((l) => l.id !== id);
+    await this.saveLinks(store);
+  }
 }
