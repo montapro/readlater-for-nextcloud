@@ -204,7 +204,12 @@ export default function App() {
                 <h2 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Recent Links</h2>
                 {links.length > 0 && (
                   <div className="flex items-center gap-2">
-                    <button onClick={handleMarkAllRead} className="text-slate-400 hover:text-green-600 transition-colors" title="Mark all as read">
+                    <button 
+                      onClick={handleMarkAllRead} 
+                      disabled={!links.some(l => !l.isRead)}
+                      className={`transition-colors ${!links.some(l => !l.isRead) ? 'text-slate-200 cursor-not-allowed' : 'text-slate-400 hover:text-green-600'}`} 
+                      title="Mark all as read"
+                    >
                       <CheckCheck className="w-3.5 h-3.5" />
                     </button>
                     <button onClick={handleDeleteAll} className="text-slate-400 hover:text-red-600 transition-colors" title="Delete all">
