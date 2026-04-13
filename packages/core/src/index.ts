@@ -71,8 +71,10 @@ export class LinkKeepClient {
         return { version: "1.0", links: [] };
       }
 
+      // Add a cache buster to the request to avoid browser caching
       const content = (await this.client.getFileContents(fullPath, {
         format: "text",
+        headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
       })) as string;
       const data = JSON.parse(content);
       return LinkStoreSchema.parse(data);
