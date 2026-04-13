@@ -247,7 +247,7 @@ export default function App() {
   const hasUnread = useMemo(() => links.some(l => !l.isRead), [links]);
 
   return (
-    <div className="w-[360px] min-h-[500px] max-h-[600px] bg-background text-foreground antialiased flex flex-col overflow-x-hidden transition-colors duration-300">
+    <div className="w-[500px] min-h-[500px] max-h-[700px] bg-background text-foreground antialiased flex flex-col overflow-x-hidden transition-colors duration-300">
       <header className="px-4 py-3 border-b flex items-center justify-between bg-card sticky top-0 z-10 shadow-sm border-border">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-md shadow-primary/20">
