@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import browser from "webextension-polyfill";
-import { LinkKeepClient, WebDAVConfig } from "@linkkeep/core";
-import { Settings, Save, CheckCircle2, AlertCircle, Link2, ExternalLink } from "lucide-react";
+import { LinkKeepClient, WebDAVConfig, Link } from "@linkkeep/core";
+import { Settings, Save, CheckCircle2, AlertCircle, Link2, ExternalLink, Trash2, RefreshCw } from "lucide-react";
 
 export default function App() {
   const [config, setConfig] = useState<WebDAVConfig>({
@@ -12,6 +12,8 @@ export default function App() {
   const [isConfigured, setIsConfigured] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [currentTab, setCurrentTab] = useState<{ url?: string; title?: string }>({});
+  const [links, setLinks] = useState<Link[]>([]);
+  const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ message: string; type: "success" | "error" | "info" | null }>({
     message: "",
     type: null,
@@ -19,7 +21,6 @@ export default function App() {
 
   useEffect(() => {
     async function init() {
-      // Load config from storage (using Promise-based browser API)
       try {
         const result = await browser.storage.local.get(["webdav_url", "webdav_user", "webdav_pass"]);
         if (result.webdav_url && result.webdav_user) {
@@ -30,28 +31,39 @@ export default function App() {
           };
           setConfig(loadedConfig);
           setIsConfigured(true);
+          fetchLinks(loadedConfig);
         } else {
           setShowSettings(true);
         }
       } catch (err) {
-        console.warn("Storage access failed or not available", err);
         setShowSettings(true);
       }
 
-      // Get active tab info
       try {
         const tabs = await browser.tabs.query({ active: true, currentWindow: true });
         const activeTab = tabs[0];
         if (activeTab) {
           setCurrentTab({ url: activeTab.url, title: activeTab.title });
         }
-      } catch (err) {
-        console.warn("Tabs access failed", err);
-      }
+      } catch (err) {}
     }
 
     init();
   }, []);
+
+  const fetchLinks = async (cfg: WebDAVConfig) => {
+    setLoading(true);
+    try {
+      const client = new LinkKeepClient(cfg);
+      const store = await client.fetchLinks();
+      setLinks(store.links);
+    } catch (error) {
+      console.error(error);
+      setStatus({ message: "Failed to fetch list.", type: "error" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const saveConfig = async () => {
     try {
@@ -63,20 +75,16 @@ export default function App() {
       setIsConfigured(true);
       setShowSettings(false);
       setStatus({ message: "Settings saved!", type: "success" });
+      fetchLinks(config);
       setTimeout(() => setStatus({ message: "", type: null }), 3000);
     } catch (err) {
-      console.error(err);
       setStatus({ message: "Error saving settings.", type: "error" });
     }
   };
 
   const saveCurrentLink = async () => {
-    if (!currentTab.url || !currentTab.title) {
-      setStatus({ message: "No active tab found.", type: "error" });
-      return;
-    }
-
-    setStatus({ message: "Saving to Nextcloud...", type: "info" });
+    if (!currentTab.url || !currentTab.title) return;
+    setStatus({ message: "Saving...", type: "info" });
     try {
       const client = new LinkKeepClient(config);
       await client.addLink({
@@ -84,112 +92,168 @@ export default function App() {
         title: currentTab.title,
         tags: [],
       });
-      setStatus({ message: "Saved successfully!", type: "success" });
+      setStatus({ message: "Saved!", type: "success" });
+      fetchLinks(config);
     } catch (error) {
-      console.error(error);
-      setStatus({ message: "Failed to save. Check settings.", type: "error" });
+      setStatus({ message: "Failed to save.", type: "error" });
+    }
+  };
+
+  const handleToggleRead = async (id: string, isRead: boolean) => {
+    try {
+      const client = new LinkKeepClient(config);
+      await client.updateLink(id, { isRead: !isRead });
+      fetchLinks(config);
+    } catch (error) {
+      setStatus({ message: "Update failed.", type: "error" });
+    }
+  };
+
+  const handleDeleteLink = async (id: string) => {
+    if (!confirm("Delete this link?")) return;
+    try {
+      const client = new LinkKeepClient(config);
+      await client.deleteLink(id);
+      fetchLinks(config);
+    } catch (error) {
+      setStatus({ message: "Delete failed.", type: "error" });
     }
   };
 
   return (
-    <div className="w-[350px] min-h-[250px] bg-background text-foreground antialiased flex flex-col">
-      <header className="px-4 py-3 border-b flex items-center justify-between bg-white sticky top-0 z-10">
+    <div className="w-[380px] min-h-[450px] max-h-[600px] bg-background text-foreground antialiased flex flex-col overflow-hidden">
+      <header className="px-4 py-3 border-b flex items-center justify-between bg-white sticky top-0 z-10 shadow-sm">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <Link2 className="text-white w-5 h-5" />
           </div>
           <h1 className="font-bold text-lg tracking-tight">LinkKeep</h1>
         </div>
-        <button 
-          onClick={() => setShowSettings(!showSettings)}
-          className="p-2 hover:bg-secondary rounded-full transition-colors"
-          title="Settings"
-        >
-          <Settings className="w-5 h-5 text-muted-foreground" />
-        </button>
+        <div className="flex items-center gap-1">
+           <button 
+            onClick={() => fetchLinks(config)}
+            className={`p-2 hover:bg-secondary rounded-full transition-colors ${loading ? 'animate-spin' : ''}`}
+            disabled={loading || !isConfigured}
+          >
+            <RefreshCw className="w-4 h-4 text-muted-foreground" />
+          </button>
+          <button 
+            onClick={() => setShowSettings(!showSettings)}
+            className="p-2 hover:bg-secondary rounded-full transition-colors"
+          >
+            <Settings className="w-5 h-5 text-muted-foreground" />
+          </button>
+        </div>
       </header>
 
-      <main className="flex-1 p-4">
+      <main className="flex-1 flex flex-col overflow-hidden">
         {showSettings ? (
-          <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="p-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">WebDAV Configuration</h2>
             <div className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-xs font-medium">Server URL</label>
-                <input
-                  placeholder="https://nextcloud.com/remote.php/dav/files/user/"
-                  value={config.url}
-                  onChange={(e) => setConfig({ ...config, url: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium">Username</label>
-                <input
-                  placeholder="Username"
-                  value={config.username}
-                  onChange={(e) => setConfig({ ...config, username: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium">App Password</label>
-                <input
-                  type="password"
-                  placeholder="••••••••••••"
-                  value={config.password}
-                  onChange={(e) => setConfig({ ...config, password: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                />
-              </div>
+              <input
+                placeholder="Nextcloud WebDAV URL"
+                value={config.url}
+                onChange={(e) => setConfig({ ...config, url: e.target.value })}
+                className="w-full px-3 py-2 text-sm border rounded-md outline-none focus:ring-2 focus:ring-primary/20"
+              />
+              <input
+                placeholder="Username"
+                value={config.username}
+                onChange={(e) => setConfig({ ...config, username: e.target.value })}
+                className="w-full px-3 py-2 text-sm border rounded-md outline-none focus:ring-2 focus:ring-primary/20"
+              />
+              <input
+                type="password"
+                placeholder="App Password"
+                value={config.password}
+                onChange={(e) => setConfig({ ...config, password: e.target.value })}
+                className="w-full px-3 py-2 text-sm border rounded-md outline-none focus:ring-2 focus:ring-primary/20"
+              />
               <button
                 onClick={saveConfig}
-                className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary text-white rounded-md font-semibold hover:bg-primary/90 transition-colors shadow-sm"
+                className="w-full py-2.5 bg-primary text-white rounded-md font-semibold hover:bg-primary/90 transition-colors"
               >
-                <Save className="w-4 h-4" />
-                Save Config
+                Save & Connect
               </button>
             </div>
           </div>
         ) : (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            <div className="bg-secondary/50 p-4 rounded-xl border border-secondary">
-              <div className="flex items-start gap-3">
-                <div className="bg-white p-2 rounded-lg border shadow-sm">
-                  <ExternalLink className="w-5 h-5 text-primary" />
-                </div>
-                <div className="flex-1 overflow-hidden">
-                  <h3 className="font-semibold text-sm line-clamp-2 leading-tight mb-1">
-                    {currentTab.title || "Loading tab info..."}
-                  </h3>
-                  <p className="text-xs text-muted-foreground truncate italic">
-                    {currentTab.url}
-                  </p>
-                </div>
-              </div>
+          <div className="flex-1 flex flex-col overflow-hidden p-4">
+            {/* LINK LIST: DIRECTLY ABOVE THE SAVE BUTTON */}
+            <div className="flex-1 overflow-y-auto mb-4 space-y-2 pr-1 custom-scrollbar">
+              <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2 px-1">Recent Links</h2>
+              {loading && links.length === 0 ? (
+                <div className="py-10 text-center text-muted-foreground text-sm">Synchronizing...</div>
+              ) : links.length === 0 ? (
+                <div className="py-10 text-center text-muted-foreground text-sm italic">No links found</div>
+              ) : (
+                links.slice(0, 8).map((link) => (
+                  <div key={link.id} className={`p-3 rounded-lg border flex flex-col gap-2 transition-all ${link.isRead ? 'bg-secondary/20 opacity-60' : 'bg-white shadow-sm border-slate-100'}`}>
+                    <div className="flex-1 min-w-0">
+                      <h3 className={`text-xs font-semibold truncate leading-tight ${link.isRead ? 'line-through text-muted-foreground' : 'text-slate-800'}`}>{link.title}</h3>
+                      <p className="text-[10px] text-muted-foreground truncate font-mono mt-0.5">{link.url}</p>
+                    </div>
+                    
+                    <div className="flex items-center justify-end gap-4 border-t border-slate-50 pt-2 mt-1">
+                      <a href={link.url} target="_blank" className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-primary transition-colors">
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                      <button 
+                        onClick={() => handleToggleRead(link.id, link.isRead)} 
+                        className={`p-1 hover:bg-slate-100 rounded transition-colors ${link.isRead ? 'text-green-600' : 'text-slate-400 hover:text-green-600'}`}
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteLink(link.id)} 
+                        className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-destructive transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
 
-            <button
-              onClick={saveCurrentLink}
-              disabled={status.type === "info"}
-              className="w-full flex items-center justify-center gap-3 py-4 bg-primary text-white rounded-xl font-bold text-base hover:bg-primary/90 transition-all shadow-md active:scale-[0.98] disabled:opacity-50"
-            >
-              <Save className="w-6 h-6" />
-              Keep this Link
-            </button>
+            {/* QUICK SAVE SECTION (BOTTOM) */}
+            <div className="border-t pt-4 bg-background">
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 mb-4">
+                <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Active Page</p>
+                <div className="flex items-start gap-2">
+                  <div className="bg-white p-1.5 rounded-md border border-slate-200 shadow-sm">
+                    <Link2 className="w-3.5 h-3.5 text-primary" />
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <h3 className="text-[11px] font-bold truncate text-slate-700 leading-none">{currentTab.title || "---"}</h3>
+                    <p className="text-[10px] text-slate-400 truncate mt-1 italic">{currentTab.url}</p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={saveCurrentLink}
+                disabled={status.type === "info" || !isConfigured}
+                className="w-full flex items-center justify-center gap-2 py-3.5 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 active:scale-[0.97] disabled:opacity-50"
+              >
+                <Save className="w-5 h-5" />
+                Keep this Link
+              </button>
+            </div>
           </div>
         )}
       </main>
 
       {status.message && (
-        <footer className={`px-4 py-2 text-xs flex items-center gap-2 animate-in slide-in-from-bottom-2 duration-300 ${
-          status.type === "error" ? "bg-destructive/10 text-destructive border-t border-destructive/20" : 
-          status.type === "success" ? "bg-primary/10 text-primary border-t border-primary/20" : 
-          "bg-secondary text-muted-foreground border-t"
+        <footer className={`px-4 py-2 text-[10px] flex items-center gap-2 animate-in slide-in-from-bottom-1 border-t ${
+          status.type === "error" ? "bg-red-50 text-red-600 border-red-100" : 
+          status.type === "success" ? "bg-green-50 text-green-700 border-green-100" : 
+          "bg-slate-50 text-slate-500 border-slate-100"
         }`}>
-          {status.type === "success" && <CheckCircle2 className="w-3.5 h-3.5" />}
-          {status.type === "error" && <AlertCircle className="w-3.5 h-3.5" />}
-          <span className="font-medium">{status.message}</span>
+          {status.type === "success" && <CheckCircle2 className="w-3 h-3" />}
+          {status.type === "error" && <AlertCircle className="w-3 h-3" />}
+          <span className="font-semibold">{status.message}</span>
         </footer>
       )}
     </div>
