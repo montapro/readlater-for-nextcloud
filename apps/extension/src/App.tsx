@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import browser from "webextension-polyfill";
 import { LinkKeepClient, WebDAVConfig } from "@linkkeep/core";
 import { Settings, Save, CheckCircle2, AlertCircle, Link2, ExternalLink } from "lucide-react";
 
@@ -17,8 +18,10 @@ export default function App() {
   });
 
   useEffect(() => {
-    if (typeof chrome !== "undefined" && chrome.storage) {
-      chrome.storage.local.get(["webdav_url", "webdav_user", "webdav_pass"], (result: { [key: string]: any }) => {
+    async function init() {
+      // Load config from storage (using Promise-based browser API)
+      try {
+        const result = await browser.storage.local.get(["webdav_url", "webdav_user", "webdav_pass"]);
         if (result.webdav_url && result.webdav_user) {
           const loadedConfig: WebDAVConfig = {
             url: result.webdav_url as string,
@@ -30,34 +33,40 @@ export default function App() {
         } else {
           setShowSettings(true);
         }
-      });
-    }
+      } catch (err) {
+        console.warn("Storage access failed or not available", err);
+        setShowSettings(true);
+      }
 
-    if (typeof chrome !== "undefined" && chrome.tabs) {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      // Get active tab info
+      try {
+        const tabs = await browser.tabs.query({ active: true, currentWindow: true });
         const activeTab = tabs[0];
         if (activeTab) {
           setCurrentTab({ url: activeTab.url, title: activeTab.title });
         }
-      });
+      } catch (err) {
+        console.warn("Tabs access failed", err);
+      }
     }
+
+    init();
   }, []);
 
-  const saveConfig = () => {
-    if (typeof chrome !== "undefined" && chrome.storage) {
-      chrome.storage.local.set(
-        {
-          webdav_url: config.url,
-          webdav_user: config.username,
-          webdav_pass: config.password,
-        },
-        () => {
-          setIsConfigured(true);
-          setShowSettings(false);
-          setStatus({ message: "Settings saved!", type: "success" });
-          setTimeout(() => setStatus({ message: "", type: null }), 3000);
-        }
-      );
+  const saveConfig = async () => {
+    try {
+      await browser.storage.local.set({
+        webdav_url: config.url,
+        webdav_user: config.username,
+        webdav_pass: config.password,
+      });
+      setIsConfigured(true);
+      setShowSettings(false);
+      setStatus({ message: "Settings saved!", type: "success" });
+      setTimeout(() => setStatus({ message: "", type: null }), 3000);
+    } catch (err) {
+      console.error(err);
+      setStatus({ message: "Error saving settings.", type: "error" });
     }
   };
 
@@ -84,7 +93,6 @@ export default function App() {
 
   return (
     <div className="w-[350px] min-h-[250px] bg-background text-foreground antialiased flex flex-col">
-      {/* Header */}
       <header className="px-4 py-3 border-b flex items-center justify-between bg-white sticky top-0 z-10">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
@@ -173,7 +181,6 @@ export default function App() {
         )}
       </main>
 
-      {/* Status Bar */}
       {status.message && (
         <footer className={`px-4 py-2 text-xs flex items-center gap-2 animate-in slide-in-from-bottom-2 duration-300 ${
           status.type === "error" ? "bg-destructive/10 text-destructive border-t border-destructive/20" : 

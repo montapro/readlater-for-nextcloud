@@ -11,13 +11,15 @@
     "@linkkeep/core": "workspace:*",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "webextension-polyfill": "^0.12.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.2",
     "@types/chrome": "^0.1.40",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/webextension-polyfill": "^0.12.5",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.27",
     "class-variance-authority": "^0.7.1",
