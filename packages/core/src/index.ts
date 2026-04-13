@@ -1,4 +1,4 @@
-import { createClient, WebDAVClient } from "webdav";
+import { createClient, WebDAVClient, AuthType } from "webdav";
 import { z } from "zod";
 
 // --- Schema Definitions ---
@@ -38,17 +38,23 @@ export class LinkKeepClient {
 
   constructor(config: WebDAVConfig) {
     this.client = createClient(config.url, {
+      authType: AuthType.Password,
       username: config.username,
       password: config.password,
     });
   }
 
+  /**
+   * Verifies the connection.
+   */
   async verifyConnection(): Promise<boolean> {
     try {
-      await this.client.getDirectoryContents("/");
+      // Force a request that must be authenticated
+      await this.client.getDirectoryContents("/", { 
+        details: false 
+      });
       return true;
-    } catch (error) {
-      console.error("LinkKeep: Connection verification failed", error);
+    } catch (error: any) {
       return false;
     }
   }
@@ -59,7 +65,6 @@ export class LinkKeepClient {
         await this.client.createDirectory(this.storagePath);
       }
     } catch (error) {
-      console.error("LinkKeep: Failed to create storage directory", error);
       throw new Error("Could not initialize storage directory on WebDAV.");
     }
   }
@@ -71,16 +76,20 @@ export class LinkKeepClient {
         return { version: "1.0", links: [] };
       }
 
-      // Add a cache buster to the request to avoid browser caching
+      // Explicitly set headers to avoid caching
       const content = (await this.client.getFileContents(fullPath, {
         format: "text",
-        headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+        headers: { 
+          "Cache-Control": "no-cache, no-store, must-revalidate", 
+          "Pragma": "no-cache",
+          "Expires": "0"
+        }
       })) as string;
+      
       const data = JSON.parse(content);
       return LinkStoreSchema.parse(data);
     } catch (error) {
-      console.error("LinkKeep: Failed to fetch links", error);
-      throw new Error("Could not fetch links from WebDAV.");
+      throw new Error("Access denied or connection error. Check your credentials.");
     }
   }
 
@@ -91,42 +100,26 @@ export class LinkKeepClient {
       const content = JSON.stringify(store, null, 2);
       await this.client.putFileContents(fullPath, content);
     } catch (error) {
-      console.error("LinkKeep: Failed to save links", error);
-      throw new Error("Could not save links to WebDAV.");
+      throw new Error("Could not save to WebDAV. Check permissions.");
     }
   }
 
-  /**
-   * Adds a new link or reactivates an existing read link.
-   */
   async addLink(linkData: Omit<Link, "id" | "addedAt" | "isRead">): Promise<Link> {
     const store = await this.fetchLinks();
-    
-    // Check if URL already exists
     const existingIndex = store.links.findIndex(l => l.url === linkData.url);
     
     if (existingIndex !== -1) {
       const existing = store.links[existingIndex];
-      
-      // If it's already unread, we just return it (or could throw, but UI prevents this)
-      if (!existing.isRead) {
-        return existing;
-      }
-
-      // If it's read, we reactivate it: mark as unread, update title and date
+      if (!existing.isRead) return existing;
       existing.isRead = false;
       existing.addedAt = new Date().toISOString();
       existing.title = linkData.title;
-
-      // Move to top
       store.links.splice(existingIndex, 1);
       store.links.unshift(existing);
-      
       await this.saveLinks(store);
       return existing;
     }
 
-    // New link
     const newLink: Link = {
       ...linkData,
       id: crypto.randomUUID(),
@@ -144,7 +137,6 @@ export class LinkKeepClient {
     const store = await this.fetchLinks();
     const index = store.links.findIndex((l) => l.id === id);
     if (index === -1) throw new Error("Link not found.");
-
     store.links[index] = { ...store.links[index], ...updates };
     await this.saveLinks(store);
   }
@@ -155,18 +147,12 @@ export class LinkKeepClient {
     await this.saveLinks(store);
   }
 
-  /**
-   * Marks all links in the store as read.
-   */
   async markAllAsRead(): Promise<void> {
     const store = await this.fetchLinks();
     store.links = store.links.map(l => ({ ...l, isRead: true }));
     await this.saveLinks(store);
   }
 
-  /**
-   * Deletes all links from the store.
-   */
   async deleteAllLinks(): Promise<void> {
     const store = { version: "1.0", links: [] };
     await this.saveLinks(store);
