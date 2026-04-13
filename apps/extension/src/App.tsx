@@ -30,8 +30,19 @@ export default function App() {
   useEffect(() => {
     async function init() {
       try {
-        const result = await browser.storage.local.get(["webdav_url", "webdav_user", "webdav_pass", "links_cache"]);
+        const result = await browser.storage.local.get([
+          "webdav_url", 
+          "webdav_user", 
+          "webdav_pass", 
+          "links_cache",
+          "pref_filter",
+          "pref_sortBy"
+        ]);
+        
         if (result.links_cache) setLinks(result.links_cache as Link[]);
+        if (result.pref_filter) setFilter(result.pref_filter as FilterType);
+        if (result.pref_sortBy) setSortBy(result.pref_sortBy as SortType);
+
         if (result.webdav_url && result.webdav_user) {
           const loadedConfig: WebDAVConfig = {
             url: result.webdav_url as string,
@@ -58,6 +69,11 @@ export default function App() {
     }
     init();
   }, []);
+
+  // Persist filter and sort changes
+  useEffect(() => {
+    browser.storage.local.set({ pref_filter: filter, pref_sortBy: sortBy });
+  }, [filter, sortBy]);
 
   const fetchLinks = async (cfg: WebDAVConfig) => {
     setLoading(true);
@@ -147,6 +163,8 @@ export default function App() {
     return result;
   }, [links, filter, sortBy]);
 
+  const hasUnread = useMemo(() => links.some(l => !l.isRead), [links]);
+
   return (
     <div className="w-[360px] min-h-[500px] max-h-[600px] bg-background text-foreground antialiased flex flex-col overflow-x-hidden">
       <header className="px-4 py-3 border-b flex items-center justify-between bg-white sticky top-0 z-10 shadow-sm">
@@ -157,11 +175,18 @@ export default function App() {
           <h1 className="font-bold text-lg tracking-tight text-slate-800">LinkKeep</h1>
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={() => fetchLinks(config)} className={`p-2 hover:bg-slate-100 rounded-full transition-colors ${loading ? 'animate-spin' : ''}`} disabled={loading || !isConfigured}>
+          <button 
+            onClick={() => fetchLinks(config)} 
+            className={`p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer disabled:cursor-default ${loading ? 'animate-spin' : ''}`} 
+            disabled={loading || !isConfigured}
+          >
             <RefreshCw className="w-4 h-4 text-slate-500" />
           </button>
-          <button onClick={() => setShowSettings(!showSettings)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-            <Settings className="w-5 h-5 text-slate-500" />
+          <button 
+            onClick={() => setShowSettings(!showSettings)} 
+            className={`p-2 rounded-full transition-colors cursor-pointer ${showSettings ? 'bg-primary/10 text-primary' : 'hover:bg-slate-100 text-slate-500'}`}
+          >
+            <Settings className="w-5 h-5" />
           </button>
         </div>
       </header>
@@ -174,10 +199,15 @@ export default function App() {
               <input placeholder="WebDAV URL" value={config.url} onChange={(e) => setConfig({ ...config, url: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none" />
               <input placeholder="Username" value={config.username} onChange={(e) => setConfig({ ...config, username: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none" />
               <input type="password" placeholder="App Password" value={config.password} onChange={(e) => setConfig({ ...config, password: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none" />
-              <button onClick={async () => {
-                await browser.storage.local.set({ webdav_url: config.url, webdav_user: config.username, webdav_pass: config.password });
-                setIsConfigured(true); setShowSettings(false); fetchLinks(config);
-              }} className="w-full py-2.5 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">Save Settings</button>
+              <button 
+                onClick={async () => {
+                  await browser.storage.local.set({ webdav_url: config.url, webdav_user: config.username, webdav_pass: config.password });
+                  setIsConfigured(true); setShowSettings(false); fetchLinks(config);
+                }} 
+                className="w-full py-2.5 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 cursor-pointer"
+              >
+                Save Settings
+              </button>
             </div>
           </div>
         ) : (
@@ -185,13 +215,21 @@ export default function App() {
             <div className="px-4 py-2 bg-slate-100 border-b flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 flex-1 overflow-x-auto no-scrollbar">
                 {(["all", "unread", "read"] as FilterType[]).map(f => (
-                  <button key={f} onClick={() => setFilter(f)} className={`px-2.5 py-1 rounded-full text-[10px] font-bold capitalize transition-all whitespace-nowrap ${filter === f ? 'bg-primary text-white' : 'bg-white text-slate-500 border'}`}>
+                  <button 
+                    key={f} 
+                    onClick={() => setFilter(f)} 
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold capitalize transition-all whitespace-nowrap cursor-pointer ${filter === f ? 'bg-primary text-white' : 'bg-white text-slate-500 border'}`}
+                  >
                     {f}
                   </button>
                 ))}
               </div>
               <div className="flex items-center gap-1 border-l pl-2 border-slate-300">
-                <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortType)} className="text-[10px] font-bold text-slate-500 bg-transparent outline-none">
+                <select 
+                  value={sortBy} 
+                  onChange={(e) => setSortBy(e.target.value as SortType)} 
+                  className="text-[10px] font-bold text-slate-500 bg-transparent outline-none cursor-pointer"
+                >
                   <option value="newest">Newest</option>
                   <option value="oldest">Oldest</option>
                   <option value="alpha">A-Z</option>
@@ -206,13 +244,13 @@ export default function App() {
                   <div className="flex items-center gap-2">
                     <button 
                       onClick={handleMarkAllRead} 
-                      disabled={!links.some(l => !l.isRead)}
-                      className={`transition-colors ${!links.some(l => !l.isRead) ? 'text-slate-200 cursor-not-allowed' : 'text-slate-400 hover:text-green-600'}`} 
+                      disabled={!hasUnread}
+                      className={`transition-colors cursor-pointer disabled:cursor-default ${!hasUnread ? 'text-slate-200' : 'text-slate-400 hover:text-green-600'}`} 
                       title="Mark all as read"
                     >
                       <CheckCheck className="w-3.5 h-3.5" />
                     </button>
-                    <button onClick={handleDeleteAll} className="text-slate-400 hover:text-red-600 transition-colors" title="Delete all">
+                    <button onClick={handleDeleteAll} className="text-slate-400 hover:text-red-600 transition-colors cursor-pointer" title="Delete all">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -229,9 +267,9 @@ export default function App() {
                       <p className="text-[9px] text-slate-400 truncate mt-0.5 font-mono">{link.url}</p>
                     </div>
                     <div className="flex items-center justify-end gap-3 pt-2 mt-1 border-t border-slate-100">
-                      <a href={link.url} target="_blank" className="p-1 text-slate-400 hover:text-primary transition-colors"><ExternalLink className="w-3.5 h-3.5" /></a>
-                      <button onClick={() => handleToggleRead(link.id, link.isRead)} className={`p-1 transition-colors ${link.isRead ? 'text-green-600' : 'text-slate-400 hover:text-green-600'}`}><CheckCircle2 className="w-3.5 h-3.5" /></button>
-                      <button onClick={() => handleDeleteLink(link.id)} className="p-1 text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                      <a href={link.url} target="_blank" className="p-1 text-slate-400 hover:text-primary transition-colors cursor-pointer"><ExternalLink className="w-3.5 h-3.5" /></a>
+                      <button onClick={() => handleToggleRead(link.id, link.isRead)} className={`p-1 transition-colors cursor-pointer ${link.isRead ? 'text-green-600' : 'text-slate-400 hover:text-green-600'}`}><CheckCircle2 className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => handleDeleteLink(link.id)} className="p-1 text-slate-400 hover:text-red-500 transition-colors cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
                     </div>
                   </div>
                 ))
@@ -256,7 +294,7 @@ export default function App() {
               <button
                 onClick={saveCurrentLink}
                 disabled={status.type === "info" || !isConfigured || isAlreadySavedAndUnread}
-                className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all shadow-lg active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 ${
+                className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all shadow-lg active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 cursor-pointer disabled:cursor-default ${
                   isAlreadySavedAndUnread ? 'bg-green-500 text-white shadow-green-200' : 'bg-primary text-white shadow-primary/20 hover:bg-primary/90'
                 }`}
               >
