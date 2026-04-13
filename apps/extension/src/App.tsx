@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import browser from "webextension-polyfill";
 import { LinkKeepClient, WebDAVConfig, Link } from "@linkkeep/core";
-import { Settings, Save, CheckCircle2, AlertCircle, Link2, ExternalLink, Trash2, RefreshCw, CheckCheck } from "lucide-react";
+import { Settings, Save, CheckCircle2, AlertCircle, Link2, ExternalLink, Trash2, RefreshCw, CheckCheck, Wifi } from "lucide-react";
 
 type FilterType = "all" | "read" | "unread";
 type SortType = "newest" | "oldest" | "alpha";
@@ -13,6 +13,7 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState<{ url?: string; title?: string }>({});
   const [links, setLinks] = useState<Link[]>([]);
   const [loading, setLoading] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
   
   const [filter, setFilter] = useState<FilterType>("all");
   const [sortBy, setSortBy] = useState<SortType>("newest");
@@ -70,7 +71,6 @@ export default function App() {
     init();
   }, []);
 
-  // Persist filter and sort changes
   useEffect(() => {
     browser.storage.local.set({ pref_filter: filter, pref_sortBy: sortBy });
   }, [filter, sortBy]);
@@ -87,6 +87,24 @@ export default function App() {
       setStatus({ message: "Sync failed.", type: "error" });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const testConnection = async () => {
+    setTestingConnection(true);
+    setStatus({ message: "Testing connection...", type: "info" });
+    try {
+      const client = new LinkKeepClient(config);
+      const ok = await client.verifyConnection();
+      if (ok) {
+        setStatus({ message: "Connection successful!", type: "success" });
+      } else {
+        setStatus({ message: "Connection failed. Check your data.", type: "error" });
+      }
+    } catch (err) {
+      setStatus({ message: "Test failed. Check URL and CORS.", type: "error" });
+    } finally {
+      setTestingConnection(false);
     }
   };
 
@@ -175,17 +193,10 @@ export default function App() {
           <h1 className="font-bold text-lg tracking-tight text-slate-800">LinkKeep</h1>
         </div>
         <div className="flex items-center gap-1">
-          <button 
-            onClick={() => fetchLinks(config)} 
-            className={`p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer disabled:cursor-default ${loading ? 'animate-spin' : ''}`} 
-            disabled={loading || !isConfigured}
-          >
+          <button onClick={() => fetchLinks(config)} className={`p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer disabled:cursor-default ${loading ? 'animate-spin' : ''}`} disabled={loading || !isConfigured}>
             <RefreshCw className="w-4 h-4 text-slate-500" />
           </button>
-          <button 
-            onClick={() => setShowSettings(!showSettings)} 
-            className={`p-2 rounded-full transition-colors cursor-pointer ${showSettings ? 'bg-primary/10 text-primary' : 'hover:bg-slate-100 text-slate-500'}`}
-          >
+          <button onClick={() => setShowSettings(!showSettings)} className={`p-2 rounded-full transition-colors cursor-pointer ${showSettings ? 'bg-primary/10 text-primary' : 'hover:bg-slate-100 text-slate-500'}`}>
             <Settings className="w-5 h-5" />
           </button>
         </div>
@@ -199,15 +210,26 @@ export default function App() {
               <input placeholder="WebDAV URL" value={config.url} onChange={(e) => setConfig({ ...config, url: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none" />
               <input placeholder="Username" value={config.username} onChange={(e) => setConfig({ ...config, username: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none" />
               <input type="password" placeholder="App Password" value={config.password} onChange={(e) => setConfig({ ...config, password: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none" />
-              <button 
-                onClick={async () => {
-                  await browser.storage.local.set({ webdav_url: config.url, webdav_user: config.username, webdav_pass: config.password });
-                  setIsConfigured(true); setShowSettings(false); fetchLinks(config);
-                }} 
-                className="w-full py-2.5 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 cursor-pointer"
-              >
-                Save Settings
-              </button>
+              
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <button 
+                  onClick={testConnection}
+                  disabled={testingConnection || !config.url || !config.username}
+                  className="flex items-center justify-center gap-2 py-2.5 border border-slate-200 text-slate-600 rounded-lg font-semibold hover:bg-slate-100 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-default"
+                >
+                  <Wifi className={`w-4 h-4 ${testingConnection ? 'animate-pulse' : ''}`} />
+                  Test
+                </button>
+                <button 
+                  onClick={async () => {
+                    await browser.storage.local.set({ webdav_url: config.url, webdav_user: config.username, webdav_pass: config.password });
+                    setIsConfigured(true); setShowSettings(false); fetchLinks(config);
+                  }} 
+                  className="py-2.5 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 cursor-pointer"
+                >
+                  Save
+                </button>
+              </div>
             </div>
           </div>
         ) : (
@@ -215,21 +237,13 @@ export default function App() {
             <div className="px-4 py-2 bg-slate-100 border-b flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 flex-1 overflow-x-auto no-scrollbar">
                 {(["all", "unread", "read"] as FilterType[]).map(f => (
-                  <button 
-                    key={f} 
-                    onClick={() => setFilter(f)} 
-                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold capitalize transition-all whitespace-nowrap cursor-pointer ${filter === f ? 'bg-primary text-white' : 'bg-white text-slate-500 border'}`}
-                  >
+                  <button key={f} onClick={() => setFilter(f)} className={`px-2.5 py-1 rounded-full text-[10px] font-bold capitalize transition-all whitespace-nowrap cursor-pointer ${filter === f ? 'bg-primary text-white' : 'bg-white text-slate-500 border'}`}>
                     {f}
                   </button>
                 ))}
               </div>
               <div className="flex items-center gap-1 border-l pl-2 border-slate-300">
-                <select 
-                  value={sortBy} 
-                  onChange={(e) => setSortBy(e.target.value as SortType)} 
-                  className="text-[10px] font-bold text-slate-500 bg-transparent outline-none cursor-pointer"
-                >
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortType)} className="text-[10px] font-bold text-slate-500 bg-transparent outline-none cursor-pointer">
                   <option value="newest">Newest</option>
                   <option value="oldest">Oldest</option>
                   <option value="alpha">A-Z</option>
@@ -242,12 +256,7 @@ export default function App() {
                 <h2 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Recent Links</h2>
                 {links.length > 0 && (
                   <div className="flex items-center gap-2">
-                    <button 
-                      onClick={handleMarkAllRead} 
-                      disabled={!hasUnread}
-                      className={`transition-colors cursor-pointer disabled:cursor-default ${!hasUnread ? 'text-slate-200' : 'text-slate-400 hover:text-green-600'}`} 
-                      title="Mark all as read"
-                    >
+                    <button onClick={handleMarkAllRead} disabled={!hasUnread} className={`transition-colors cursor-pointer disabled:cursor-default ${!hasUnread ? 'text-slate-200' : 'text-slate-400 hover:text-green-600'}`} title="Mark all as read">
                       <CheckCheck className="w-3.5 h-3.5" />
                     </button>
                     <button onClick={handleDeleteAll} className="text-slate-400 hover:text-red-600 transition-colors cursor-pointer" title="Delete all">
