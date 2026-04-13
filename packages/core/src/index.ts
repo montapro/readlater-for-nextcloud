@@ -152,4 +152,21 @@ export class LinkKeepClient {
     store.links = store.links.filter((l) => l.id !== id);
     await this.saveLinks(store);
   }
+
+  /**
+   * Marks all links in the store as read.
+   */
+  async markAllAsRead(): Promise<void> {
+    const store = await this.fetchLinks();
+    store.links = store.links.map(l => ({ ...l, isRead: true }));
+    await this.saveLinks(store);
+  }
+
+  /**
+   * Deletes all links from the store.
+   */
+  async deleteAllLinks(): Promise<void> {
+    const store = { version: "1.0", links: [] };
+    await this.saveLinks(store);
+  }
 }

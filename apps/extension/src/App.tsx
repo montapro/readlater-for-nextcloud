@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import browser from "webextension-polyfill";
 import { LinkKeepClient, WebDAVConfig, Link } from "@linkkeep/core";
-import { Settings, Save, CheckCircle2, AlertCircle, Link2, ExternalLink, Trash2, RefreshCw } from "lucide-react";
+import { Settings, Save, CheckCircle2, AlertCircle, Link2, ExternalLink, Trash2, RefreshCw, CheckCheck } from "lucide-react";
 
 type FilterType = "all" | "read" | "unread";
 type SortType = "newest" | "oldest" | "alpha";
@@ -29,15 +29,9 @@ export default function App() {
 
   useEffect(() => {
     async function init() {
-      // Load initial data and cache
       try {
         const result = await browser.storage.local.get(["webdav_url", "webdav_user", "webdav_pass", "links_cache"]);
-        
-        // Show cached links immediately for better UX
-        if (result.links_cache) {
-          setLinks(result.links_cache as Link[]);
-        }
-
+        if (result.links_cache) setLinks(result.links_cache as Link[]);
         if (result.webdav_url && result.webdav_user) {
           const loadedConfig: WebDAVConfig = {
             url: result.webdav_url as string,
@@ -62,7 +56,6 @@ export default function App() {
         }
       } catch (err) {}
     }
-
     init();
   }, []);
 
@@ -72,12 +65,8 @@ export default function App() {
       const client = new LinkKeepClient(cfg);
       const store = await client.fetchLinks();
       setLinks(store.links);
-      
-      // Update cache
       await browser.storage.local.set({ links_cache: store.links });
-      // Notify background script to update badge
       browser.runtime.sendMessage({ type: "SYNC_LINKS" });
-      
     } catch (error) {
       setStatus({ message: "Sync failed.", type: "error" });
     } finally {
@@ -90,11 +79,7 @@ export default function App() {
     setStatus({ message: "Saving...", type: "info" });
     try {
       const client = new LinkKeepClient(config);
-      await client.addLink({
-        url: currentTab.url,
-        title: currentTab.title,
-        tags: [],
-      });
+      await client.addLink({ url: currentTab.url, title: currentTab.title, tags: [] });
       setStatus({ message: "Saved!", type: "success" });
       await fetchLinks(config);
     } catch (error: any) {
@@ -123,6 +108,32 @@ export default function App() {
     }
   };
 
+  const handleMarkAllRead = async () => {
+    if (!confirm("Mark all links as read?")) return;
+    setStatus({ message: "Updating...", type: "info" });
+    try {
+      const client = new LinkKeepClient(config);
+      await client.markAllAsRead();
+      setStatus({ message: "All marked as read!", type: "success" });
+      await fetchLinks(config);
+    } catch (error) {
+      setStatus({ message: "Failed to update.", type: "error" });
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (!confirm("DANGER: Delete ALL links permanently?")) return;
+    setStatus({ message: "Deleting everything...", type: "info" });
+    try {
+      const client = new LinkKeepClient(config);
+      await client.deleteAllLinks();
+      setStatus({ message: "All links deleted.", type: "success" });
+      await fetchLinks(config);
+    } catch (error) {
+      setStatus({ message: "Deletion failed.", type: "error" });
+    }
+  };
+
   const processedLinks = useMemo(() => {
     let result = [...links];
     if (filter === "read") result = result.filter(l => l.isRead);
@@ -143,14 +154,10 @@ export default function App() {
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-md shadow-primary/20">
             <Link2 className="text-white w-5 h-5" />
           </div>
-          <h1 className="font-bold text-lg tracking-tight">LinkKeep</h1>
+          <h1 className="font-bold text-lg tracking-tight text-slate-800">LinkKeep</h1>
         </div>
         <div className="flex items-center gap-1">
-          <button 
-            onClick={() => fetchLinks(config)}
-            className={`p-2 hover:bg-slate-100 rounded-full transition-colors ${loading ? 'animate-spin' : ''}`}
-            disabled={loading || !isConfigured}
-          >
+          <button onClick={() => fetchLinks(config)} className={`p-2 hover:bg-slate-100 rounded-full transition-colors ${loading ? 'animate-spin' : ''}`} disabled={loading || !isConfigured}>
             <RefreshCw className="w-4 h-4 text-slate-500" />
           </button>
           <button onClick={() => setShowSettings(!showSettings)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
@@ -159,7 +166,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden bg-slate-50/30">
         {showSettings ? (
           <div className="p-4 space-y-4 animate-in fade-in slide-in-from-top-2">
             <h2 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Settings</h2>
@@ -175,7 +182,7 @@ export default function App() {
           </div>
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="px-4 py-2 bg-slate-50 border-b flex items-center justify-between gap-2">
+            <div className="px-4 py-2 bg-slate-100 border-b flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 flex-1 overflow-x-auto no-scrollbar">
                 {(["all", "unread", "read"] as FilterType[]).map(f => (
                   <button key={f} onClick={() => setFilter(f)} className={`px-2.5 py-1 rounded-full text-[10px] font-bold capitalize transition-all whitespace-nowrap ${filter === f ? 'bg-primary text-white' : 'bg-white text-slate-500 border'}`}>
@@ -183,7 +190,7 @@ export default function App() {
                   </button>
                 ))}
               </div>
-              <div className="flex items-center gap-1 border-l pl-2 border-slate-200">
+              <div className="flex items-center gap-1 border-l pl-2 border-slate-300">
                 <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortType)} className="text-[10px] font-bold text-slate-500 bg-transparent outline-none">
                   <option value="newest">Newest</option>
                   <option value="oldest">Oldest</option>
@@ -192,19 +199,33 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-2 pr-1 custom-scrollbar bg-slate-50/30">
+            <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Recent Links</h2>
+                {links.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <button onClick={handleMarkAllRead} className="text-slate-400 hover:text-green-600 transition-colors" title="Mark all as read">
+                      <CheckCheck className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={handleDeleteAll} className="text-slate-400 hover:text-red-600 transition-colors" title="Delete all">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+              
               {processedLinks.length === 0 ? (
                 <div className="py-12 text-center text-slate-400 text-xs italic">No matching links found</div>
               ) : (
                 processedLinks.map((link) => (
-                  <div key={link.id} className={`p-3 rounded-xl border flex flex-col gap-2 transition-all group ${link.isRead ? 'bg-slate-100 opacity-60' : 'bg-white shadow-sm border-slate-200 hover:border-primary/30'}`}>
+                  <div key={link.id} className={`p-3 rounded-xl border flex flex-col gap-2 transition-all group ${link.isRead ? 'bg-slate-200/50 opacity-60' : 'bg-white shadow-sm border-slate-200 hover:border-primary/30'}`}>
                     <div className="flex-1 min-w-0">
-                      <h3 className={`text-[11px] font-bold truncate ${link.isRead ? 'line-through text-slate-400' : 'text-slate-700'}`}>{link.title}</h3>
-                      <p className="text-[9px] text-slate-400 truncate mt-0.5">{link.url}</p>
+                      <h3 className={`text-[11px] font-bold truncate ${link.isRead ? 'line-through text-slate-500' : 'text-slate-800'}`}>{link.title}</h3>
+                      <p className="text-[9px] text-slate-400 truncate mt-0.5 font-mono">{link.url}</p>
                     </div>
                     <div className="flex items-center justify-end gap-3 pt-2 mt-1 border-t border-slate-100">
                       <a href={link.url} target="_blank" className="p-1 text-slate-400 hover:text-primary transition-colors"><ExternalLink className="w-3.5 h-3.5" /></a>
-                      <button onClick={() => handleToggleRead(link.id, link.isRead)} className={`p-1 transition-colors ${link.isRead ? 'text-green-500' : 'text-slate-400 hover:text-green-500'}`}><CheckCircle2 className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => handleToggleRead(link.id, link.isRead)} className={`p-1 transition-colors ${link.isRead ? 'text-green-600' : 'text-slate-400 hover:text-green-600'}`}><CheckCircle2 className="w-3.5 h-3.5" /></button>
                       <button onClick={() => handleDeleteLink(link.id)} className="p-1 text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
                     </div>
                   </div>
@@ -213,16 +234,16 @@ export default function App() {
             </div>
 
             <div className="p-4 border-t bg-white shadow-up">
-              <div className={`p-3 rounded-xl border transition-all mb-3 ${isAlreadySavedAndUnread ? 'bg-green-50 border-green-100' : 'bg-slate-50 border-slate-100'}`}>
+              <div className={`p-3 rounded-xl border transition-all mb-3 ${isAlreadySavedAndUnread ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'}`}>
                 <div className="flex items-start gap-2.5">
                   <div className={`p-1.5 rounded-lg border shadow-sm ${isAlreadySavedAndUnread ? 'bg-white text-green-500 border-green-200' : 'bg-white text-primary border-slate-200'}`}>
-                    {isAlreadySavedAndUnread ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Link2 className="w-3.5 h-3.5" />}
+                    {isAlreadySavedAndUnread ? <CheckCheck className="w-3.5 h-3.5" /> : <Link2 className="w-3.5 h-3.5" />}
                   </div>
                   <div className="flex-1 overflow-hidden">
                     <p className={`text-[9px] font-bold uppercase mb-0.5 ${isAlreadySavedAndUnread ? 'text-green-600' : 'text-slate-400'}`}>
                       {isAlreadySavedAndUnread ? "Already Saved" : "Current Tab"}
                     </p>
-                    <h3 className="text-[11px] font-bold truncate text-slate-700 leading-none">{currentTab.title || "---"}</h3>
+                    <h3 className="text-[11px] font-bold truncate text-slate-800 leading-none">{currentTab.title || "---"}</h3>
                   </div>
                 </div>
               </div>
@@ -235,7 +256,7 @@ export default function App() {
                 }`}
               >
                 {isAlreadySavedAndUnread ? <CheckCircle2 className="w-5 h-5" /> : <Save className="w-5 h-5" />}
-                {isAlreadySavedAndUnread ? "In your Collection" : "Keep this Link"}
+                {isAlreadySavedAndUnread ? "Saved & Unread" : "Keep this Link"}
               </button>
             </div>
           </div>
@@ -243,7 +264,7 @@ export default function App() {
       </main>
 
       {status.message && (
-        <footer className={`px-4 py-2 text-[10px] flex items-center gap-2 border-t ${status.type === "error" ? "bg-red-50 text-red-600" : status.type === "success" ? "bg-green-50 text-green-700" : "bg-slate-50 text-slate-500"}`}>
+        <footer className={`px-4 py-2 text-[10px] flex items-center gap-2 border-t ${status.type === "error" ? "bg-red-50 text-red-600 border-red-100" : status.type === "success" ? "bg-green-50 text-green-700 border-green-100" : "bg-slate-50 text-slate-500"}`}>
           <span className="font-bold">{status.message}</span>
         </footer>
       )}
