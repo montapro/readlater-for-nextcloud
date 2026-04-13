@@ -14,9 +14,9 @@ async function updateTabBadge(tabId: number, url?: string) {
   const data = await browser.storage.local.get(["links_cache"]);
   const links = (data.links_cache as Link[]) || [];
   
-  const isSaved = links.some(l => l.url === url);
+  const isSavedAndUnread = links.some(l => l.url === url && !l.isRead);
   
-  if (isSaved) {
+  if (isSavedAndUnread) {
     browser.action.setBadgeBackgroundColor({ color: "#10b981", tabId });
     browser.action.setBadgeText({ text: "✓", tabId });
   } else {

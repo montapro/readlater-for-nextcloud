@@ -26,7 +26,7 @@ export interface WebDAVConfig {
   url: string;
   username: string;
   password?: string;
-  token?: string; // For Bearer token auth if needed
+  token?: string;
 }
 
 // --- Client Implementation ---
@@ -43,9 +43,6 @@ export class LinkKeepClient {
     });
   }
 
-  /**
-   * Verifies the connection to the WebDAV server.
-   */
   async verifyConnection(): Promise<boolean> {
     try {
       await this.client.getDirectoryContents("/");
@@ -56,9 +53,6 @@ export class LinkKeepClient {
     }
   }
 
-  /**
-   * Ensures that the /LinkKeep directory exists on the server.
-   */
   async ensureStorageExists(): Promise<void> {
     try {
       if (!(await this.client.exists(this.storagePath))) {
@@ -70,10 +64,6 @@ export class LinkKeepClient {
     }
   }
 
-  /**
-   * Fetches the current link store from WebDAV.
-   * If the file doesn't exist, returns an empty store.
-   */
   async fetchLinks(): Promise<LinkStore> {
     const fullPath = `${this.storagePath}/${this.fileName}`;
     try {
@@ -92,9 +82,6 @@ export class LinkKeepClient {
     }
   }
 
-  /**
-   * Saves the link store to WebDAV.
-   */
   async saveLinks(store: LinkStore): Promise<void> {
     const fullPath = `${this.storagePath}/${this.fileName}`;
     try {
@@ -108,17 +95,36 @@ export class LinkKeepClient {
   }
 
   /**
-   * Adds a new link to the store. Prevents duplicates by URL.
+   * Adds a new link or reactivates an existing read link.
    */
   async addLink(linkData: Omit<Link, "id" | "addedAt" | "isRead">): Promise<Link> {
     const store = await this.fetchLinks();
     
-    // Duplicate check
-    const exists = store.links.find(l => l.url === linkData.url);
-    if (exists) {
-      throw new Error("Link already exists in your collection.");
+    // Check if URL already exists
+    const existingIndex = store.links.findIndex(l => l.url === linkData.url);
+    
+    if (existingIndex !== -1) {
+      const existing = store.links[existingIndex];
+      
+      // If it's already unread, we just return it (or could throw, but UI prevents this)
+      if (!existing.isRead) {
+        return existing;
+      }
+
+      // If it's read, we reactivate it: mark as unread, update title and date
+      existing.isRead = false;
+      existing.addedAt = new Date().toISOString();
+      existing.title = linkData.title;
+
+      // Move to top
+      store.links.splice(existingIndex, 1);
+      store.links.unshift(existing);
+      
+      await this.saveLinks(store);
+      return existing;
     }
 
+    // New link
     const newLink: Link = {
       ...linkData,
       id: crypto.randomUUID(),
@@ -127,14 +133,11 @@ export class LinkKeepClient {
       tags: linkData.tags || [],
     };
 
-    store.links.unshift(newLink); // Add to the beginning
+    store.links.unshift(newLink);
     await this.saveLinks(store);
     return newLink;
   }
 
-  /**
-   * Updates an existing link.
-   */
   async updateLink(id: string, updates: Partial<Omit<Link, "id" | "addedAt">>): Promise<void> {
     const store = await this.fetchLinks();
     const index = store.links.findIndex((l) => l.id === id);
@@ -144,9 +147,6 @@ export class LinkKeepClient {
     await this.saveLinks(store);
   }
 
-  /**
-   * Deletes a link from the store.
-   */
   async deleteLink(id: string): Promise<void> {
     const store = await this.fetchLinks();
     store.links = store.links.filter((l) => l.id !== id);

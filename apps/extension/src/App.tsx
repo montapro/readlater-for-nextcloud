@@ -22,9 +22,9 @@ export default function App() {
     type: null,
   });
 
-  const isAlreadySaved = useMemo(() => {
+  const isAlreadySavedAndUnread = useMemo(() => {
     if (!currentTab.url) return false;
-    return links.some(l => l.url === currentTab.url);
+    return links.some(l => l.url === currentTab.url && !l.isRead);
   }, [links, currentTab.url]);
 
   useEffect(() => {
@@ -86,7 +86,7 @@ export default function App() {
   };
 
   const saveCurrentLink = async () => {
-    if (!currentTab.url || !currentTab.title || isAlreadySaved) return;
+    if (!currentTab.url || !currentTab.title || isAlreadySavedAndUnread) return;
     setStatus({ message: "Saving...", type: "info" });
     try {
       const client = new LinkKeepClient(config);
@@ -213,14 +213,14 @@ export default function App() {
             </div>
 
             <div className="p-4 border-t bg-white shadow-up">
-              <div className={`p-3 rounded-xl border transition-all mb-3 ${isAlreadySaved ? 'bg-green-50 border-green-100' : 'bg-slate-50 border-slate-100'}`}>
+              <div className={`p-3 rounded-xl border transition-all mb-3 ${isAlreadySavedAndUnread ? 'bg-green-50 border-green-100' : 'bg-slate-50 border-slate-100'}`}>
                 <div className="flex items-start gap-2.5">
-                  <div className={`p-1.5 rounded-lg border shadow-sm ${isAlreadySaved ? 'bg-white text-green-500 border-green-200' : 'bg-white text-primary border-slate-200'}`}>
-                    {isAlreadySaved ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Link2 className="w-3.5 h-3.5" />}
+                  <div className={`p-1.5 rounded-lg border shadow-sm ${isAlreadySavedAndUnread ? 'bg-white text-green-500 border-green-200' : 'bg-white text-primary border-slate-200'}`}>
+                    {isAlreadySavedAndUnread ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Link2 className="w-3.5 h-3.5" />}
                   </div>
                   <div className="flex-1 overflow-hidden">
-                    <p className={`text-[9px] font-bold uppercase mb-0.5 ${isAlreadySaved ? 'text-green-600' : 'text-slate-400'}`}>
-                      {isAlreadySaved ? "Already Saved" : "Current Tab"}
+                    <p className={`text-[9px] font-bold uppercase mb-0.5 ${isAlreadySavedAndUnread ? 'text-green-600' : 'text-slate-400'}`}>
+                      {isAlreadySavedAndUnread ? "Already Saved" : "Current Tab"}
                     </p>
                     <h3 className="text-[11px] font-bold truncate text-slate-700 leading-none">{currentTab.title || "---"}</h3>
                   </div>
@@ -229,13 +229,13 @@ export default function App() {
 
               <button
                 onClick={saveCurrentLink}
-                disabled={status.type === "info" || !isConfigured || isAlreadySaved}
+                disabled={status.type === "info" || !isConfigured || isAlreadySavedAndUnread}
                 className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all shadow-lg active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 ${
-                  isAlreadySaved ? 'bg-green-500 text-white shadow-green-200' : 'bg-primary text-white shadow-primary/20 hover:bg-primary/90'
+                  isAlreadySavedAndUnread ? 'bg-green-500 text-white shadow-green-200' : 'bg-primary text-white shadow-primary/20 hover:bg-primary/90'
                 }`}
               >
-                {isAlreadySaved ? <CheckCircle2 className="w-5 h-5" /> : <Save className="w-5 h-5" />}
-                {isAlreadySaved ? "In your Collection" : "Keep this Link"}
+                {isAlreadySavedAndUnread ? <CheckCircle2 className="w-5 h-5" /> : <Save className="w-5 h-5" />}
+                {isAlreadySavedAndUnread ? "In your Collection" : "Keep this Link"}
               </button>
             </div>
           </div>
