@@ -108,11 +108,17 @@ export class LinkKeepClient {
   }
 
   /**
-   * Adds a new link to the store.
+   * Adds a new link to the store. Prevents duplicates by URL.
    */
   async addLink(linkData: Omit<Link, "id" | "addedAt" | "isRead">): Promise<Link> {
     const store = await this.fetchLinks();
     
+    // Duplicate check
+    const exists = store.links.find(l => l.url === linkData.url);
+    if (exists) {
+      throw new Error("Link already exists in your collection.");
+    }
+
     const newLink: Link = {
       ...linkData,
       id: crypto.randomUUID(),
