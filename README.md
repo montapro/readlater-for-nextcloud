@@ -1,6 +1,6 @@
-# LinkKeep 🔗
+# LinkKeep 🔗 (Open Source)
 
-**LinkKeep** is a private, self-hosted "Read Later" solution. It allows you to save bookmarks and articles directly to your own **Nextcloud** or any **WebDAV** server. No third-party accounts, no tracking—just your data on your server.
+**LinkKeep** is a **fully open-source**, private, self-hosted "Read Later" solution. It allows you to save bookmarks and articles directly to your own **Nextcloud** or any **WebDAV** server. No third-party accounts, no tracking—just your data on your server.
 
 This project is built as a modern monorepo containing a browser extension, a mobile app, and a shared core logic package.
 
@@ -19,6 +19,7 @@ The project uses [Turborepo](https://turbo.build/) and [pnpm](https://pnpm.io/) 
 
 ## ✨ Features
 
+- **100% Open Source:** Transparent, community-driven development.
 - **Privacy First:** All data is stored as a simple `links.json` file in a `/LinkKeep` (or custom) directory on your WebDAV server.
 - **Cross-Platform:** Save links on your desktop and read them on your mobile device.
 - **Smart Detection:** Real-time visual feedback (badge icon) in the browser if a page is already saved.
@@ -92,8 +93,14 @@ The mobile app is powered by **Expo**. You can test it via Expo Go or build stan
 
 ---
 
+## 🤝 Contributing
+
+As an open-source project, contributions are highly welcome! Whether it's a bug report, a feature request, or a pull request, feel free to get involved.
+
+---
+
 ## ⚖️ License & Privacy
 
 LinkKeep does not collect any user data. Communication happens directly between your device and your specified WebDAV server.
 
-**License:** MIT
+**License:** MIT — feel free to fork, modify, and share.
