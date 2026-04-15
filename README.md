@@ -10,7 +10,7 @@ This project is built as a modern monorepo containing a browser extension, a mob
 
 The project uses [Turborepo](https://turbo.build/) and [pnpm](https://pnpm.io/) for workspace management:
 
-- `apps/extension`: Browser extension built with **React**, **Vite**, and **Tailwind CSS v4**. Supports Chrome, Firefox, and Zen Browser.
+- `apps/extension`: Browser extension built with **React**, **Vite**, and **Tailwind CSS v4**. Supports Chromium and Firefox based Browsers.
 - `apps/mobile`: Mobile application built with **React Native** and **Expo**.
 - `packages/core`: Shared TypeScript library handling all WebDAV synchronization, data validation (Zod), and link management logic.
 - `packages/typescript-config`: Shared TS configurations.
