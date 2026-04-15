@@ -1,6 +1,6 @@
-# LinkKeep 🔗 (Open Source)
+# ReadLater for Nextcloud 🔗 (Open Source)
 
-**LinkKeep** is a **fully open-source**, private, self-hosted "Read Later" solution. It allows you to save bookmarks and articles directly to your own **Nextcloud** or any **WebDAV** server. No third-party accounts, no tracking—just your data on your server.
+**ReadLater for Nextcloud** is a **fully open-source**, private, self-hosted "Read Later" solution. It allows you to save bookmarks and articles directly to your own **Nextcloud** or any **WebDAV** server. No third-party accounts, no tracking—just your data on your server.
 
 This project is built as a modern monorepo containing a browser extension, a mobile app, and a shared core logic package.
 
@@ -20,7 +20,7 @@ The project uses [Turborepo](https://turbo.build/) and [pnpm](https://pnpm.io/) 
 ## ✨ Features
 
 - **100% Open Source:** Transparent, community-driven development.
-- **Privacy First:** All data is stored as a simple `links.json` file in a `/LinkKeep` (or custom) directory on your WebDAV server.
+- **Privacy First:** All data is stored as a simple `links.json` file in a `/ReadLater for Nextcloud` (or custom) directory on your WebDAV server.
 - **Cross-Platform:** Save links on your desktop and read them on your mobile device.
 - **Smart Detection:** Real-time visual feedback (badge icon) in the browser if a page is already saved.
 - **Intelligent Save:** Reactivates "Read" links if you save them again, moving them back to the top.
@@ -69,7 +69,7 @@ The compiled browser extension will be located in `apps/extension/dist`.
 
 ## 🛠 WebDAV Setup
 
-1. Open the **LinkKeep** extension settings.
+1. Open the **ReadLater for Nextcloud** extension settings.
 2. Enter your WebDAV URL (e.g., `https://your-cloud.com/remote.php/dav/files/username/`).
 3. Ensure you are logged into your Nextcloud instance in the browser, or provide explicit credentials in the settings.
 4. Click **Test Connection** to verify.
@@ -101,6 +101,6 @@ As an open-source project, contributions are highly welcome! Whether it's a bug 
 
 ## ⚖️ License & Privacy
 
-LinkKeep does not collect any user data. Communication happens directly between your device and your specified WebDAV server.
+ReadLater for Nextcloud does not collect any user data. Communication happens directly between your device and your specified WebDAV server.
 
 **License:** MIT — feel free to fork, modify, and share.

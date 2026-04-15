@@ -31,9 +31,9 @@ export interface WebDAVConfig {
 
 // --- Client Implementation ---
 
-export class LinkKeepClient {
+export class ReadLaterClient {
   private client: WebDAVClient;
-  private readonly storagePath = "/LinkKeep";
+  private readonly storagePath = "/ReadLater";
   private readonly fileName = "links.json";
 
   constructor(config: WebDAVConfig) {

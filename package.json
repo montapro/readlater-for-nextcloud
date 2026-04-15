@@ -1,5 +1,5 @@
 {
-  "name": "linkkeep",
+  "name": "readlater",
   "private": true,
   "scripts": {
     "build": "turbo build",

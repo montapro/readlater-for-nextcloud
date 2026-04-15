@@ -1,5 +1,5 @@
 import browser from "webextension-polyfill";
-import { LinkKeepClient, WebDAVConfig, Link } from "@linkkeep/core";
+import { ReadLaterClient, WebDAVConfig, Link } from "@readlater/core";
 
 /**
  * Updates the extension icon (badge) based on whether the current URL is already saved.
@@ -28,14 +28,14 @@ async function updateTabBadge(tabId: number, url?: string) {
  */
 async function syncLinks() {
   const data = await browser.storage.local.get(["webdav_url", "webdav_user", "webdav_pass"]);
-  if (data.webdav_url && data.webdav_user) {
+  if (data.webdav_url) {
     try {
       const config: WebDAVConfig = {
         url: data.webdav_url as string,
         username: data.webdav_user as string,
         password: (data.webdav_pass as string) || ""
       };
-      const client = new LinkKeepClient(config);
+      const client = new ReadLaterClient(config);
       const store = await client.fetchLinks();
       
       await browser.storage.local.set({ links_cache: store.links });
@@ -46,7 +46,7 @@ async function syncLinks() {
         updateTabBadge(activeTab.id, activeTab.url);
       }
     } catch (err) {
-      console.error("LinkKeep: Background sync failed", err);
+      console.error("ReadLater: Background sync failed", err);
     }
   }
 }
@@ -65,11 +65,9 @@ browser.tabs.onActivated.addListener(async (activeInfo) => {
 
 // REAKTIVITÄT: Auf Speicheränderungen reagieren
 browser.storage.onChanged.addListener((changes) => {
-  // Wenn sich Zugangsdaten ändern, sofort neu syncen
   if (changes.webdav_url || changes.webdav_user || changes.webdav_pass) {
     syncLinks();
   }
-  // Wenn sich der Cache ändert, Badge für den aktuellen Tab aktualisieren
   if (changes.links_cache) {
     browser.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
       const activeTab = tabs[0];

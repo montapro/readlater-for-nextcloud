@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import browser from "webextension-polyfill";
-import { LinkKeepClient, WebDAVConfig, Link } from "@linkkeep/core";
+import { ReadLaterClient, WebDAVConfig, Link } from "@readlater/core";
 import { Settings, Save, CheckCircle2, AlertCircle, Link2, ExternalLink, Trash2, RefreshCw, CheckCheck, Wifi, Moon, Sun, Monitor, LogIn, BookOpen, User, Lock } from "lucide-react";
 
 type FilterType = "all" | "read" | "unread";
@@ -94,7 +94,7 @@ export default function App() {
     if (!cfg.url) return;
     setLoading(true);
     try {
-      const client = new LinkKeepClient(cfg);
+      const client = new ReadLaterClient(cfg);
       const store = await client.fetchLinks();
       setLinks(store.links);
       await browser.storage.local.set({ links_cache: store.links });
@@ -110,7 +110,7 @@ export default function App() {
     setTestingConnection(true);
     setStatus({ message: "Testing connection...", type: "info" });
     try {
-      const client = new LinkKeepClient(config);
+      const client = new ReadLaterClient(config);
       const ok = await client.verifyConnection();
       if (ok) {
         setStatus({ message: "Connection successful!", type: "success" });
@@ -134,7 +134,7 @@ export default function App() {
       });
       
       if (config.url) {
-        const client = new LinkKeepClient(config);
+        const client = new ReadLaterClient(config);
         const store = await client.fetchLinks();
         setLinks(store.links);
         await browser.storage.local.set({ links_cache: store.links });
@@ -158,7 +158,7 @@ export default function App() {
     if (!currentTab.url || !currentTab.title || isAlreadySavedAndUnread) return;
     setStatus({ message: "Saving...", type: "info" });
     try {
-      const client = new LinkKeepClient(config);
+      const client = new ReadLaterClient(config);
       await client.addLink({ url: currentTab.url, title: currentTab.title, tags: [] });
       setStatus({ message: "Saved!", type: "success" });
       await fetchLinks(config);
@@ -169,7 +169,7 @@ export default function App() {
 
   const handleToggleRead = async (id: string, isRead: boolean) => {
     try {
-      const client = new LinkKeepClient(config);
+      const client = new ReadLaterClient(config);
       await client.updateLink(id, { isRead: !isRead });
       await fetchLinks(config);
     } catch (error) {
@@ -180,7 +180,7 @@ export default function App() {
   const handleDeleteLink = async (id: string) => {
     if (!confirm("Delete this link?")) return;
     try {
-      const client = new LinkKeepClient(config);
+      const client = new ReadLaterClient(config);
       await client.deleteLink(id);
       await fetchLinks(config);
     } catch (error) {
@@ -192,7 +192,7 @@ export default function App() {
     if (!confirm("Mark all links as read?")) return;
     setStatus({ message: "Updating...", type: "info" });
     try {
-      const client = new LinkKeepClient(config);
+      const client = new ReadLaterClient(config);
       await client.markAllAsRead();
       setStatus({ message: "All marked as read!", type: "success" });
       await fetchLinks(config);
@@ -205,7 +205,7 @@ export default function App() {
     if (!confirm("DANGER: Delete ALL links permanently?")) return;
     setStatus({ message: "Deleting everything...", type: "info" });
     try {
-      const client = new LinkKeepClient(config);
+      const client = new ReadLaterClient(config);
       await client.deleteAllLinks();
       setStatus({ message: "All links deleted.", type: "success" });
       await fetchLinks(config);
@@ -253,7 +253,7 @@ export default function App() {
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-md shadow-primary/20">
             <Link2 className="text-white w-5 h-5" />
           </div>
-          <h1 className="font-bold text-lg tracking-tight text-slate-800 dark:text-slate-100">LinkKeep</h1>
+          <h1 className="font-bold text-lg tracking-tight text-slate-800 dark:text-slate-100">ReadLater</h1>
         </div>
         <div className="flex items-center gap-1">
           <button onClick={() => fetchLinks(config)} className={`p-2 hover:bg-muted rounded-full transition-colors cursor-pointer disabled:cursor-default ${loading ? 'animate-spin' : ''}`} disabled={loading || !isConfigured}>

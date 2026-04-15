@@ -14,7 +14,7 @@ import { StatusBar } from "expo-status-bar";
 import * as SecureStore from "expo-secure-store";
 import * as Crypto from "expo-crypto";
 import * as Linking from "expo-linking";
-import { LinkKeepClient, WebDAVConfig, Link } from "@linkkeep/core";
+import { ReadLaterClient, WebDAVConfig, Link } from "@readlater/core";
 import { Settings, Save, RefreshCw, Link2, Trash2, CheckCircle, ExternalLink } from "lucide-react-native";
 
 // Polyfill for crypto.randomUUID
@@ -65,7 +65,7 @@ export default function App() {
   const fetchLinks = async (cfg: WebDAVConfig) => {
     setLoading(true);
     try {
-      const client = new LinkKeepClient(cfg);
+      const client = new ReadLaterClient(cfg);
       const store = await client.fetchLinks();
       setLinks(store.links);
     } catch (error) {
@@ -82,7 +82,7 @@ export default function App() {
 
   const handleToggleRead = async (id: string, isRead: boolean) => {
     try {
-      const client = new LinkKeepClient(config);
+      const client = new ReadLaterClient(config);
       await client.updateLink(id, { isRead: !isRead });
       await fetchLinks(config);
     } catch (error) {
@@ -101,7 +101,7 @@ export default function App() {
           style: "destructive", 
           onPress: async () => {
             try {
-              const client = new LinkKeepClient(config);
+              const client = new ReadLaterClient(config);
               await client.deleteLink(id);
               await fetchLinks(config);
             } catch (error) {
@@ -165,7 +165,7 @@ export default function App() {
           <View style={styles.logo}>
             <Link2 color="#fff" size={20} />
           </View>
-          <Text style={styles.headerTitle}>LinkKeep</Text>
+          <Text style={styles.headerTitle}>ReadLater</Text>
         </View>
         <TouchableOpacity onPress={() => setShowSettings(!showSettings)}>
           <Settings color="#64748b" size={24} />

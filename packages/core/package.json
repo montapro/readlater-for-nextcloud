@@ -1,5 +1,5 @@
 {
-  "name": "@linkkeep/core",
+  "name": "@readlater/core",
   "version": "1.0.0",
   "description": "Core logic for LinkKeep WebDAV synchronization",
   "main": "./dist/index.js",

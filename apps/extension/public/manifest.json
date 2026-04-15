@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "LinkKeep",
+  "name": "ReadLater for Nextcloud",
   "version": "1.0.0",
   "description": "Save links to your Nextcloud via WebDAV.",
   "action": {
@@ -21,7 +21,7 @@
   ],
   "browser_specific_settings": {
     "gecko": {
-      "id": "linkkeep@markuskrause.com",
+      "id": "readlater@markuskrause.com",
       "strict_min_version": "109.0"
     }
   }
