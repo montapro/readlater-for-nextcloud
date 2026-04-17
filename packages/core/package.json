@@ -1,7 +1,7 @@
 {
   "name": "@readlater/core",
   "version": "1.0.0",
-  "description": "Core logic for LinkKeep WebDAV synchronization",
+  "description": "Core logic for ReadLater WebDAV synchronization",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
@@ -10,7 +10,7 @@
     "lint": "eslint src/**"
   },
   "keywords": [
-    "linkkeep",
+    "readlater",
     "webdav",
     "nextcloud",
     "sync"

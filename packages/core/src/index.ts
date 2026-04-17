@@ -59,7 +59,7 @@ export class ReadLaterClient {
       await this.client.getDirectoryContents("/", { details: false });
       return true;
     } catch (error: any) {
-      console.error("LinkKeep: Connection check failed", error);
+      console.error("ReadLater: Connection check failed", error);
       return false;
     }
   }

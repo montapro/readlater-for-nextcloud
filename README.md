@@ -85,7 +85,7 @@ The extension is Manifest V3 compliant and compatible with:
 
 To package for store upload:
 ```bash
-cd apps/extension/dist && zip -r ../linkkeep-extension.zip .
+cd apps/extension/dist && zip -r ../readlater-extension.zip .
 ```
 
 ### Mobile App
@@ -104,3 +104,4 @@ As an open-source project, contributions are highly welcome! Whether it's a bug 
 ReadLater for Nextcloud does not collect any user data. Communication happens directly between your device and your specified WebDAV server.
 
 **License:** MIT — feel free to fork, modify, and share.
+
