@@ -1,7 +1,9 @@
 {
   "manifest_version": 3,
   "name": "ReadLater for Nextcloud",
-  "version": "1.0.0",
+  "version": "1.0.2",
+  "author": "Markus Krause (hi@markuskrause.org)",
+  "homepage_url": "https://markuskrause.org",
   "description": "Save links to your Nextcloud via WebDAV.",
   "action": {
     "default_popup": "index.html"
@@ -21,7 +23,7 @@
   ],
   "browser_specific_settings": {
     "gecko": {
-      "id": "readlater@markuskrause.com",
+      "id": "readlater@markuskrause.org",
       "strict_min_version": "109.0"
     }
   }

@@ -15,7 +15,7 @@
     "nextcloud",
     "sync"
   ],
-  "author": "",
+  "author": "Markus Krause <hi@markuskrause.org> (https://markuskrause.org)",
   "license": "ISC",
   "dependencies": {
     "webdav": "^5.9.0",

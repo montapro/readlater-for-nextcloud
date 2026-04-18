@@ -1,6 +1,7 @@
 {
   "name": "readlater",
   "private": true,
+  "author": "Markus Krause <hi@markuskrause.org> (https://markuskrause.org)",
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",

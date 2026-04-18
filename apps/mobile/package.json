@@ -1,6 +1,8 @@
 {
   "name": "readlater-mobile",
   "version": "1.0.0",
+  "private": true,
+  "author": "Markus Krause <hi@markuskrause.org> (https://markuskrause.org)",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
