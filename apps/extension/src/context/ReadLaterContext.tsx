@@ -29,6 +29,8 @@ interface ReadLaterContextValue {
   setFilter: (f: FilterType) => void;
   sortBy: SortType;
   setSortBy: (s: SortType) => void;
+  searchQuery: string;
+  setSearchQuery: (q: string) => void;
   currentTab: { url?: string; title?: string };
   isUrlValid: boolean;
   isAlreadySavedAndUnread: boolean;
@@ -87,6 +89,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   const [showSettings, setShowSettings] = useState(false);
   const [filter, setFilter] = useState<FilterType>("all");
   const [sortBy, setSortBy] = useState<SortType>("newest");
+  const [searchQuery, setSearchQuery] = useState("");
   const [currentTab, setCurrentTab] = useState<{
     url?: string;
     title?: string;
@@ -342,6 +345,8 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       setFilter,
       sortBy,
       setSortBy,
+      searchQuery,
+      setSearchQuery,
       currentTab,
       isUrlValid,
       isAlreadySavedAndUnread,
@@ -366,6 +371,8 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       showSettings,
       filter,
       sortBy,
+      searchQuery,
+      setSearchQuery,
       currentTab,
       isUrlValid,
       isAlreadySavedAndUnread,

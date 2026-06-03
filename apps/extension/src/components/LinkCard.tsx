@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "@readlater/core";
 import { useReadLater } from "../context/ReadLaterContext";
 import { formatDate } from "../utils";
-import { ExternalLink, CheckCircle2, Trash2 } from "lucide-react";
+import { ExternalLink, CheckCircle2, Trash2, Tag } from "lucide-react";
 
 interface Props {
   link: Link;
@@ -29,10 +29,32 @@ export function LinkCard({ link }: Props) {
         >
           {link.title}
         </h3>
+
+        {link.description && (
+          <p className="text-[10px] text-muted-foreground/80 mt-0.5 line-clamp-2 leading-relaxed">
+            {link.description}
+          </p>
+        )}
+
         <p className="text-[9px] text-muted-foreground truncate mt-0.5 font-mono">
           {link.url}
         </p>
+
+        {link.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            {link.tags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[8px] font-semibold"
+              >
+                <Tag className="w-2.5 h-2.5" />
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
+
       <div className="flex items-center justify-between pt-2 mt-1 border-t border-border/50">
         <span className="text-[9px] text-muted-foreground font-medium">
           {formatDate(link.addedAt)}

@@ -8,6 +8,7 @@ export function LinkList() {
     links,
     filter,
     sortBy,
+    searchQuery,
     handleMarkAllRead,
     handleDeleteAll,
     hasUnread,
@@ -18,6 +19,15 @@ export function LinkList() {
     let result = [...links];
     if (filter === "read") result = result.filter((l) => l.isRead);
     if (filter === "unread") result = result.filter((l) => !l.isRead);
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter(
+        (l) =>
+          l.title.toLowerCase().includes(q) ||
+          l.url.toLowerCase().includes(q) ||
+          l.tags.some((t) => t.toLowerCase().includes(q))
+      );
+    }
     result.sort((a, b) => {
       if (sortBy === "newest")
         return new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime();
@@ -27,7 +37,7 @@ export function LinkList() {
       return 0;
     });
     return result;
-  }, [links, filter, sortBy]);
+  }, [links, filter, sortBy, searchQuery]);
 
   if (loading && links.length === 0) {
     return (
