@@ -1,20 +1,22 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useReadLater } from "../context/ReadLaterContext";
+import { useTheme } from "../hooks/useTheme";
 import { RefreshCw } from "lucide-react-native";
 
 export function BottomBar() {
   const { refreshLinks, loading } = useReadLater();
+  const { colors } = useTheme();
 
   return (
-    <View style={styles.bottomBar}>
+    <View style={[styles.bottomBar, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
       <TouchableOpacity
-        style={styles.refreshButton}
+        style={[styles.refreshButton, { backgroundColor: colors.buttonBg }]}
         onPress={refreshLinks}
         disabled={loading}
       >
-        <RefreshCw color="#2563eb" size={20} />
-        <Text style={styles.refreshText}>
+        <RefreshCw color={colors.primary} size={20} style={loading ? { transform: [{ rotate: "45deg" }] } : undefined} />
+        <Text style={[styles.refreshText, { color: colors.primary }]}>
           {loading ? "Syncing..." : "Sync Now"}
         </Text>
       </TouchableOpacity>
@@ -25,9 +27,7 @@ export function BottomBar() {
 const styles = StyleSheet.create({
   bottomBar: {
     padding: 15,
-    backgroundColor: "#fff",
     borderTopWidth: 1,
-    borderTopColor: "#e2e8f0",
   },
   refreshButton: {
     flexDirection: "row",
@@ -35,11 +35,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     padding: 12,
-    backgroundColor: "#eff6ff",
     borderRadius: 10,
   },
   refreshText: {
-    color: "#2563eb",
     fontWeight: "700",
   },
 });

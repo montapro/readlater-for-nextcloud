@@ -5,6 +5,7 @@ import {
   ReadLaterProvider,
   useReadLater,
 } from "./src/context/ReadLaterContext";
+import { useTheme } from "./src/hooks/useTheme";
 import { Header } from "./src/components/Header";
 import { SettingsPanel } from "./src/components/SettingsPanel";
 import { LinkList } from "./src/components/LinkList";
@@ -15,14 +16,15 @@ import { BottomBar } from "./src/components/BottomBar";
  */
 function AppContent() {
   const { showSettings } = useReadLater();
+  const { isDark, colors } = useTheme();
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="auto" />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={isDark ? "light" : "dark"} />
 
       <Header />
 
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
         {showSettings ? <SettingsPanel /> : <LinkList />}
       </View>
 
@@ -45,6 +47,5 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
   },
 });
