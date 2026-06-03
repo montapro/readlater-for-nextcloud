@@ -17,6 +17,9 @@
     "tabs",
     "activeTab"
   ],
+  "content_security_policy": {
+    "extension_pages": "default-src 'self'; connect-src *; style-src 'self' 'unsafe-inline'"
+  },
   "host_permissions": [
     "<all_urls>"
   ],
