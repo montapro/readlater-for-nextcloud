@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import browser from "webextension-polyfill";
 import { ReadLaterClient, WebDAVConfig, Link } from "@readlater/core";
-import { Settings, Save, CheckCircle2, AlertCircle, Link2, ExternalLink, Trash2, RefreshCw, CheckCheck, Wifi, Moon, Sun, Monitor, LogIn, BookOpen, User, Lock } from "lucide-react";
+import { Settings, Save, CheckCircle2, Link2, ExternalLink, Trash2, RefreshCw, CheckCheck, Wifi, Moon, Sun, Monitor, BookOpen, User, Lock } from "lucide-react";
 
 type FilterType = "all" | "read" | "unread";
 type SortType = "newest" | "oldest" | "alpha";
@@ -65,6 +65,7 @@ export default function App() {
           setShowSettings(true);
         }
       } catch (err) {
+        console.error("ReadLater: Failed to initialize settings", err);
         setShowSettings(true);
       }
 
@@ -74,7 +75,9 @@ export default function App() {
         if (activeTab) {
           setCurrentTab({ url: activeTab.url, title: activeTab.title });
         }
-      } catch (err) {}
+      } catch (_err) {
+        // Tab query may fail in some contexts (e.g. incognito)
+      }
     }
     init();
   }, []);
@@ -98,8 +101,9 @@ export default function App() {
       const store = await client.fetchLinks();
       setLinks(store.links);
       await browser.storage.local.set({ links_cache: store.links });
-    } catch (error: any) {
-      setStatus({ message: error.message || "Sync failed.", type: "error" });
+    } catch (_error: unknown) {
+      const err = _error as { message?: string };
+      setStatus({ message: err.message || "Sync failed.", type: "error" });
     } finally {
       setLoading(false);
     }
@@ -111,13 +115,13 @@ export default function App() {
     setStatus({ message: "Testing connection...", type: "info" });
     try {
       const client = new ReadLaterClient(config);
-      const ok = await client.verifyConnection();
-      if (ok) {
+      const result = await client.verifyConnection();
+      if (result.ok) {
         setStatus({ message: "Connection successful!", type: "success" });
       } else {
-        setStatus({ message: "Connection failed. Check your data.", type: "error" });
+        setStatus({ message: result.error || "Connection failed. Check your data.", type: "error" });
       }
-    } catch (err) {
+    } catch (_err) {
       setStatus({ message: "Test failed. Check URL and credentials.", type: "error" });
     } finally {
       setTestingConnection(false);
@@ -147,10 +151,9 @@ export default function App() {
       
       setShowSettings(false);
       setStatus({ message: "Settings saved!", type: "success" });
-    } catch (err: any) {
-      setStatus({ message: err.message, type: "error" });
-    } finally {
-      setLoading(false);
+    } catch (_error: unknown) {
+      const err = _error as { message?: string };
+      setStatus({ message: err.message || "Save failed.", type: "error" });
     }
   };
 
@@ -162,8 +165,9 @@ export default function App() {
       await client.addLink({ url: currentTab.url, title: currentTab.title, tags: [] });
       setStatus({ message: "Saved!", type: "success" });
       await fetchLinks(config);
-    } catch (error: any) {
-      setStatus({ message: error.message, type: "error" });
+    } catch (_error: unknown) {
+      const err = _error as { message?: string };
+      setStatus({ message: err.message || "Save failed.", type: "error" });
     }
   };
 
@@ -172,7 +176,7 @@ export default function App() {
       const client = new ReadLaterClient(config);
       await client.updateLink(id, { isRead: !isRead });
       await fetchLinks(config);
-    } catch (error) {
+    } catch (_error) {
       setStatus({ message: "Update failed.", type: "error" });
     }
   };
@@ -183,7 +187,7 @@ export default function App() {
       const client = new ReadLaterClient(config);
       await client.deleteLink(id);
       await fetchLinks(config);
-    } catch (error) {
+    } catch (_error) {
       setStatus({ message: "Delete failed.", type: "error" });
     }
   };
@@ -196,7 +200,7 @@ export default function App() {
       await client.markAllAsRead();
       setStatus({ message: "All marked as read!", type: "success" });
       await fetchLinks(config);
-    } catch (error) {
+    } catch (_error) {
       setStatus({ message: "Failed to update.", type: "error" });
     }
   };
@@ -209,7 +213,7 @@ export default function App() {
       await client.deleteAllLinks();
       setStatus({ message: "All links deleted.", type: "success" });
       await fetchLinks(config);
-    } catch (error) {
+    } catch (_error) {
       setStatus({ message: "Deletion failed.", type: "error" });
     }
   };

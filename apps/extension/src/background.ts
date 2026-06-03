@@ -81,8 +81,9 @@ browser.storage.onChanged.addListener((changes) => {
 browser.runtime.onInstalled.addListener(() => syncLinks());
 browser.runtime.onStartup.addListener(() => syncLinks());
 
-browser.runtime.onMessage.addListener((message: any) => {
-  if (message.type === "SYNC_LINKS") {
+browser.runtime.onMessage.addListener((message: unknown) => {
+  const msg = message as { type?: string };
+  if (msg.type === "SYNC_LINKS") {
     syncLinks();
   }
 });
