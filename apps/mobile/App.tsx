@@ -10,10 +10,9 @@ import { Header } from "./src/components/Header";
 import { SettingsPanel } from "./src/components/SettingsPanel";
 import { LinkList } from "./src/components/LinkList";
 import { BottomBar } from "./src/components/BottomBar";
+import { StatusBanner } from "./src/components/StatusBanner";
+import { AddLinkModal } from "./src/components/AddLinkModal";
 
-/**
- * Main app content – rendered inside ReadLaterProvider.
- */
 function AppContent() {
   const { showSettings } = useReadLater();
   const { isDark, colors } = useTheme();
@@ -24,18 +23,19 @@ function AppContent() {
 
       <Header />
 
+      <StatusBanner />
+
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         {showSettings ? <SettingsPanel /> : <LinkList />}
       </View>
 
       {!showSettings && <BottomBar />}
+
+      <AddLinkModal />
     </SafeAreaView>
   );
 }
 
-/**
- * Root App component.
- */
 export default function App() {
   return (
     <ReadLaterProvider>

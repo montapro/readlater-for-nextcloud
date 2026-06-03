@@ -1,35 +1,87 @@
-import React from "react";
-import { View, Text, FlatList, ActivityIndicator, StyleSheet } from "react-native";
+import React, { useMemo } from "react";
+import { View, Text, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity } from "react-native";
 import { useReadLater } from "../context/ReadLaterContext";
 import { useTheme } from "../hooks/useTheme";
 import { LinkCard } from "./LinkCard";
-import { Link2 } from "lucide-react-native";
+import { FilterBar } from "./FilterBar";
+import { CheckCheck, Trash2, Link2 } from "lucide-react-native";
 
 export function LinkList() {
-  const { links, loading, refreshLinks } = useReadLater();
+  const { links, filter, sortBy, loading, refreshLinks, handleMarkAllRead, handleDeleteAll } = useReadLater();
   const { colors } = useTheme();
 
+  const processedLinks = useMemo(() => {
+    let result = [...links];
+    if (filter === "read") result = result.filter((l) => l.isRead);
+    if (filter === "unread") result = result.filter((l) => !l.isRead);
+    result.sort((a, b) => {
+      if (sortBy === "newest") return new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime();
+      if (sortBy === "oldest") return new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime();
+      if (sortBy === "alpha") return a.title.localeCompare(b.title);
+      return 0;
+    });
+    return result;
+  }, [links, filter, sortBy]);
+
   if (loading && links.length === 0) {
-    return <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />;
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <FilterBar />
+        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+      </View>
+    );
   }
 
+  const hasUnreadValue = links.some((l) => !l.isRead);
+
   return (
-    <FlatList
-      data={links}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item }) => <LinkCard link={item} />}
-      contentContainerStyle={[styles.listContainer, { backgroundColor: colors.background }]}
-      refreshing={loading}
-      onRefresh={refreshLinks}
-      ListEmptyComponent={
-        <View style={styles.emptyContainer}>
-          <Link2 color={colors.textMuted} size={48} />
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            Your reading list is empty.
-          </Text>
-        </View>
-      }
-    />
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <FilterBar />
+
+      <FlatList
+        data={processedLinks}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => <LinkCard link={item} />}
+        contentContainerStyle={styles.listContainer}
+        refreshing={loading}
+        onRefresh={refreshLinks}
+        ListHeaderComponent={
+          processedLinks.length > 0 ? (
+            <View style={[styles.listHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.listTitle, { color: colors.textSecondary }]}>
+                {filter === "all"
+                  ? `All Links (${processedLinks.length})`
+                  : filter === "read"
+                    ? `Read (${processedLinks.length})`
+                    : `Unread (${processedLinks.length})`}
+              </Text>
+              <View style={styles.batchActions}>
+                <TouchableOpacity
+                  onPress={handleMarkAllRead}
+                  disabled={!hasUnreadValue}
+                  style={{ opacity: hasUnreadValue ? 1 : 0.3 }}
+                >
+                  <CheckCheck color={colors.success} size={20} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleDeleteAll}>
+                  <Trash2 color={colors.destructive} size={20} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : null
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Link2 color={colors.textMuted} size={48} />
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              {filter === "all"
+                ? "Your reading list is empty."
+                : "No matching links found."}
+            </Text>
+          </View>
+        }
+      />
+    </View>
   );
 }
 
@@ -38,6 +90,23 @@ const styles = StyleSheet.create({
     padding: 15,
     gap: 12,
     flexGrow: 1,
+  },
+  listHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingBottom: 8,
+    marginBottom: 4,
+    borderBottomWidth: 1,
+  },
+  listTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  batchActions: {
+    flexDirection: "row",
+    gap: 16,
   },
   emptyContainer: {
     alignItems: "center",
