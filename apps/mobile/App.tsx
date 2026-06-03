@@ -17,18 +17,19 @@ import * as Linking from "expo-linking";
 import { ReadLaterClient, WebDAVConfig, Link } from "@readlater/core";
 import { Settings, Save, RefreshCw, Link2, Trash2, CheckCircle, ExternalLink } from "lucide-react-native";
 
-// Polyfill for crypto.randomUUID
+// Polyfill for crypto.randomUUID (preserves existing crypto methods)
 if (!global.crypto) {
-  // @ts-ignore
-  global.crypto = {};
+  // @ts-expect-error – polyfilling crypto global
+  global.crypto = {} as Crypto;
 }
 if (!global.crypto.randomUUID) {
-  // @ts-ignore
+  // @ts-expect-error – polyfilling randomUUID
   global.crypto.randomUUID = () => Crypto.randomUUID();
 }
 
 export default function App() {
   const [config, setConfig] = useState<WebDAVConfig>({ url: "", username: "", password: "" });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isConfigured, setIsConfigured] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [links, setLinks] = useState<Link[]>([]);
@@ -85,7 +86,7 @@ export default function App() {
       const client = new ReadLaterClient(config);
       await client.updateLink(id, { isRead: !isRead });
       await fetchLinks(config);
-    } catch (error) {
+    } catch (_error) {
       Alert.alert("Error", "Failed to update link.");
     }
   };
@@ -104,7 +105,7 @@ export default function App() {
               const client = new ReadLaterClient(config);
               await client.deleteLink(id);
               await fetchLinks(config);
-            } catch (error) {
+            } catch (_error) {
               Alert.alert("Error", "Failed to delete link.");
             }
           }
