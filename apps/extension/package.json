@@ -2,6 +2,7 @@
   "name": "readlater-extension",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "author": "Markus Krause <hi@markuskrause.org> (https://markuskrause.org)",
   "scripts": {
     "dev": "vite",
