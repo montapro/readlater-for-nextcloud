@@ -24,7 +24,7 @@ async function updateTabBadge(tabId: number, url?: string) {
 
   if (isCurrentSavedAndUnread) {
     browser.action.setBadgeBackgroundColor({ color: "#10b981", tabId });
-    browser.action.setBadgeText({ text: `✓${Math.min(unreadCount, 99)}`, tabId });
+    browser.action.setBadgeText({ text: `${Math.min(unreadCount, 99)}`, tabId });
   } else {
     browser.action.setBadgeBackgroundColor({ color: "#2563eb", tabId });
     browser.action.setBadgeText({ text: String(Math.min(unreadCount, 99)), tabId });
