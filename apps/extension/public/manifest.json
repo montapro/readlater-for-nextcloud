@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ReadLater for Nextcloud",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "author": "Markus Krause (hi@markuskrause.org)",
   "homepage_url": "https://markuskrause.org",
   "description": "Save links to your Nextcloud via WebDAV.",
