@@ -1,6 +1,11 @@
 import fs from 'fs';
 import { execSync } from 'child_process';
 
+function zip(name) {
+  const cmd = `rm -f ../${name} && 7z a -tzip ../${name} . > /dev/null`;
+  execSync(cmd, { cwd: distPath, shell: true });
+}
+
 const distPath = './dist';
 const manifestPath = `${distPath}/manifest.json`;
 
@@ -19,7 +24,7 @@ if (chromeManifest.background) {
   delete chromeManifest.background.scripts;
 }
 fs.writeFileSync(manifestPath, JSON.stringify(chromeManifest, null, 2));
-execSync('rm -f ../readlater-chrome.zip && zip -qr ../readlater-chrome.zip .', { cwd: distPath });
+zip("readlater-chrome.zip");
 
 // 2. Firefox Zip
 console.log("Packaging Firefox extension...");
@@ -28,8 +33,8 @@ if (ffManifest.background) {
   delete ffManifest.background.service_worker;
 }
 fs.writeFileSync(manifestPath, JSON.stringify(ffManifest, null, 2));
-execSync('rm -f ../readlater-firefox.zip && zip -qr ../readlater-firefox.zip .', { cwd: distPath });
+zip("readlater-firefox.zip");
 
 // Restore original manifest
 fs.writeFileSync(manifestPath, JSON.stringify(originalManifest, null, 2));
-console.log("Packaging complete. Created readlater-chrome.zip and readlater-firefox.zip");
+console.log("Packaging complete. Created readlater-chrome.zip and readlater-firefox.zip.");
