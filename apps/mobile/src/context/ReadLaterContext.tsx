@@ -132,17 +132,28 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const [url, user, pass, savedFilter, savedSortBy] =
+        const [url, user, pass, savedFilter, savedSortBy, linksCache] =
           await Promise.all([
             SecureStore.getItemAsync("webdav_url"),
             SecureStore.getItemAsync("webdav_user"),
             SecureStore.getItemAsync("webdav_pass"),
             SecureStore.getItemAsync("pref_filter"),
             SecureStore.getItemAsync("pref_sortBy"),
+            SecureStore.getItemAsync("links_cache"),
           ]);
 
         if (savedFilter) setFilter(savedFilter as FilterType);
         if (savedSortBy) setSortBy(savedSortBy as SortType);
+
+        // Restore cached links for immediate display
+        if (linksCache) {
+          try {
+            const parsed = JSON.parse(linksCache);
+            if (Array.isArray(parsed)) setLinks(parsed as Link[]);
+          } catch (_err) {
+            // Ignore corrupted cache
+          }
+        }
 
         if (url && user) {
           const loadedConfig: WebDAVConfig = {
@@ -181,12 +192,17 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       const client = getClient(cfg);
       const store = await client.fetchLinks();
       setLinks(store.links);
+      await SecureStore.setItemAsync("links_cache", JSON.stringify(store.links));
     } catch (_err) {
-      showStatus("Could not fetch links. Check your settings.", "error");
+      if (links.length > 0) {
+        showStatus("Showing cached data – server unreachable.", "info");
+      } else {
+        showStatus("Could not fetch links. Check your settings.", "error");
+      }
     } finally {
       setLoading(false);
     }
-  }, [showStatus]);
+  }, [links.length, showStatus]);
 
   const refreshLinks = useCallback(async () => {
     await doRefreshLinks(config);

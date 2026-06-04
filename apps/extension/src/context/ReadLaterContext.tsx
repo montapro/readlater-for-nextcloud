@@ -187,13 +187,21 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       setLinks(store.links);
       await browser.storage.local.set({ links_cache: store.links });
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Sync failed.";
-      setStatus({ message, type: "error" });
+      // Graceful degradation: if cached links exist, keep them and show a subtle hint
+      if (links.length > 0) {
+        setStatus({
+          message: "Showing cached data – server unreachable.",
+          type: "info",
+        });
+      } else {
+        const message =
+          err instanceof Error ? err.message : "Sync failed.";
+        setStatus({ message, type: "error" });
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [links.length]);
 
   const refreshLinks = useCallback(async () => {
     await doRefreshLinks(config);
