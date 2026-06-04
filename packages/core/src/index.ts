@@ -155,61 +155,38 @@ export class ReadLaterClient {
   }
 
   /**
-   * Internal: saves the link store with optional If-Match header for optimistic concurrency.
+   * Internal: saves the link store to WebDAV.
    */
-  private async saveLinksInternal(store: LinkStore, etag?: string | null): Promise<void> {
+  private async saveLinksInternal(store: LinkStore, _etag?: string | null): Promise<void> {
     LinkStoreSchema.parse(store);
     await this.ensureStorageExists();
 
     const fullPath = `${this.storagePath}/${this.fileName}`;
-    const headers: Record<string, string> = {};
-    if (etag) {
-      headers["If-Match"] = etag;
-    }
-
-    await this.client.putFileContents(fullPath, JSON.stringify(store, null, 2), {
-      headers: headers as any,
-    });
+    await this.client.putFileContents(fullPath, JSON.stringify(store, null, 2));
   }
 
   /**
-   * Wraps a read-modify-write operation with automatic retry on conflict (HTTP 412).
+   * Wraps a read-modify-write operation with retry on transient errors.
    */
   private async withRetry<T>(
-    operation: (store: LinkStore, etag: string | null) => T
+    operation: (store: LinkStore) => T
   ): Promise<T> {
     let lastError: unknown = null;
-    const maxRetries = 3;
+    const maxRetries = 2;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
-        const { store, etag } = await this.fetchLinksWithETag();
-        const result = await operation(store, etag);
-        await this.saveLinksInternal(store, etag);
+        const { store } = await this.fetchLinksWithETag();
+        const result = await operation(store);
+        await this.saveLinksInternal(store);
         return result;
       } catch (error: unknown) {
         lastError = error;
-        const err = error as { status?: number; response?: { status?: number }; message?: string };
-
-        // Check for HTTP 412 Precondition Failed (conflict)
-        const isConflict =
-          err?.status === 412 ||
-          err?.response?.status === 412 ||
-          err?.message?.includes("412");
-
-        if (isConflict && attempt < maxRetries - 1) {
-          // Exponential backoff: 100ms, 200ms, 400ms
+        if (attempt < maxRetries - 1) {
           await new Promise((resolve) =>
-            setTimeout(resolve, 100 * Math.pow(2, attempt))
+            setTimeout(resolve, 200 * Math.pow(2, attempt))
           );
           continue;
-        }
-
-        // Re-throw if it's not a conflict or we're out of retries
-        if (isConflict) {
-          throw new Error(
-            "Link data was modified by another client. Please try again."
-          );
         }
         throw error;
       }

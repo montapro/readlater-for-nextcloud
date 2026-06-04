@@ -340,8 +340,11 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
         const client = getClient(config);
         await client.updateLink(id, { isRead: !_isRead });
         await doRefreshLinks(config);
-      } catch (_err) {
-        showStatus("Update failed.", "error");
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : "Update failed.";
+        console.error("ReadLater: handleToggleRead error", err);
+        showStatus(message, "error");
       }
     },
     [config, doRefreshLinks, showStatus],
@@ -354,8 +357,11 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
         const client = getClient(config);
         await client.deleteLink(id);
         await doRefreshLinks(config);
-      } catch (_err) {
-        showStatus("Delete failed.", "error");
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : "Delete failed.";
+        console.error("ReadLater: handleDeleteLink error", err);
+        showStatus(message, "error");
       }
     },
     [config, doRefreshLinks, showStatus],
@@ -369,8 +375,11 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       await client.markAllAsRead();
       showStatus("All marked as read!", "success");
       await doRefreshLinks(config);
-    } catch (_err) {
-      showStatus("Failed to update.", "error");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to update.";
+      console.error("ReadLater: handleMarkAllRead error", err);
+      showStatus(message, "error");
     }
   }, [config, doRefreshLinks, showStatus]);
 
@@ -382,8 +391,11 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       await client.deleteAllLinks();
       showStatus("All links deleted.", "success");
       await doRefreshLinks(config);
-    } catch (_err) {
-      showStatus("Deletion failed.", "error");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Deletion failed.";
+      console.error("ReadLater: handleDeleteAll error", err);
+      showStatus(message, "error");
     }
   }, [config, doRefreshLinks, showStatus]);
 

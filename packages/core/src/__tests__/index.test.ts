@@ -358,15 +358,13 @@ describe("ReadLaterClient", () => {
   // -- optimistic concurrency (retry on conflict) --
 
   describe("optimistic concurrency", () => {
-    it("retries on HTTP 412 conflict and succeeds on second attempt", async () => {
+    it("retries on transient error and succeeds on second attempt", async () => {
       let callCount = 0;
       mockStore([]);
-      mockClient.putFileContents.mockImplementation(async (_path: string, _data: string) => {
+      mockClient.putFileContents.mockImplementation(async () => {
         callCount++;
         if (callCount === 1) {
-          const err = new Error("Precondition Failed") as any;
-          err.status = 412;
-          throw err;
+          throw new Error("ECONNRESET");
         }
         return true;
       });
@@ -380,11 +378,9 @@ describe("ReadLaterClient", () => {
       expect(callCount).toBe(2);
     });
 
-    it("throws after exhausting retries on persistent 412", async () => {
+    it("throws after exhausting retries on persistent error", async () => {
       mockStore([]);
-      mockClient.putFileContents.mockRejectedValue(
-        Object.assign(new Error("Precondition Failed"), { status: 412 })
-      );
+      mockClient.putFileContents.mockRejectedValue(new Error("ECONNRESET"));
 
       await expect(
         client.addLink({
@@ -392,7 +388,7 @@ describe("ReadLaterClient", () => {
           title: "Fail",
           tags: [],
         })
-      ).rejects.toThrow(/modified by another client/i);
+      ).rejects.toThrow("ECONNRESET");
     });
   });
 });
