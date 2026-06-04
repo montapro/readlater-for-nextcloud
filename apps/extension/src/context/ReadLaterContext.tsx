@@ -23,6 +23,8 @@ interface ReadLaterContextValue {
   loading: boolean;
   testingConnection: boolean;
   status: StatusMessage;
+  showStatus: (text: string, type: StatusMessage["type"]) => void;
+  clearStatus: () => void;
   showSettings: boolean;
   setShowSettings: (show: boolean) => void;
   filter: FilterType;
@@ -80,9 +82,11 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   const [links, setLinks] = useState<Link[]>([]);
   const [loading, setLoading] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
+
   const [status, setStatus] = useState<StatusMessage>({
-    message: "",
-    type: null,
+    text: "",
+    type: "info",
+    visible: false,
   });
 
   // --- UI state ---
@@ -112,6 +116,21 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   const hasUnread = useMemo(() => links.some((l) => !l.isRead), [links]);
 
   // -----------------------------------------------------------------------
+  // Status helpers
+  // -----------------------------------------------------------------------
+
+  const clearStatus = useCallback(() => {
+    setStatus((prev) => ({ ...prev, visible: false }));
+  }, []);
+
+  const showStatus = useCallback(
+    (text: string, type: StatusMessage["type"]) => {
+      setStatus({ text, type, visible: true });
+    },
+    [],
+  );
+
+  // -----------------------------------------------------------------------
   // Initialization
   // -----------------------------------------------------------------------
 
@@ -139,7 +158,6 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
           };
           setConfig(loadedConfig);
           setIsConfigured(true);
-          // Don't await – let the fetch happen in the background
           doRefreshLinks(loadedConfig);
         } else {
           setShowSettings(true);
@@ -177,7 +195,6 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   // Actions
   // -----------------------------------------------------------------------
 
-  /** Internal fetch helper – takes config so it can be called before state is set. */
   const doRefreshLinks = useCallback(async (cfg: WebDAVConfig) => {
     if (!cfg.url) return;
     setLoading(true);
@@ -187,21 +204,17 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       setLinks(store.links);
       await browser.storage.local.set({ links_cache: store.links });
     } catch (err: unknown) {
-      // Graceful degradation: if cached links exist, keep them and show a subtle hint
       if (links.length > 0) {
-        setStatus({
-          message: "Showing cached data – server unreachable.",
-          type: "info",
-        });
+        showStatus("Showing cached data – server unreachable.", "info");
       } else {
         const message =
           err instanceof Error ? err.message : "Sync failed.";
-        setStatus({ message, type: "error" });
+        showStatus(message, "error");
       }
     } finally {
       setLoading(false);
     }
-  }, [links.length]);
+  }, [links.length, showStatus]);
 
   const refreshLinks = useCallback(async () => {
     await doRefreshLinks(config);
@@ -210,27 +223,24 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   const testConnection = useCallback(async () => {
     if (!isUrlValid) return;
     setTestingConnection(true);
-    setStatus({ message: "Testing connection...", type: "info" });
+    showStatus("Testing connection...", "info");
     try {
       const client = getClient(config);
       const result = await client.verifyConnection();
       if (result.ok) {
-        setStatus({ message: "Connection successful!", type: "success" });
+        showStatus("Connection successful!", "success");
       } else {
-        setStatus({
-          message: result.error || "Connection failed. Check your data.",
-          type: "error",
-        });
+        showStatus(
+          result.error || "Connection failed. Check your data.",
+          "error",
+        );
       }
     } catch (_err) {
-      setStatus({
-        message: "Test failed. Check URL and credentials.",
-        type: "error",
-      });
+      showStatus("Test failed. Check URL and credentials.", "error");
     } finally {
       setTestingConnection(false);
     }
-  }, [config, isUrlValid]);
+  }, [config, isUrlValid, showStatus]);
 
   const saveSettings = useCallback(async () => {
     setLoading(true);
@@ -254,17 +264,17 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       }
 
       setShowSettings(false);
-      setStatus({ message: "Settings saved!", type: "success" });
+      showStatus("Settings saved!", "success");
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Save failed.";
-      setStatus({ message, type: "error" });
+      showStatus(message, "error");
     }
-  }, [config]);
+  }, [config, showStatus]);
 
   const saveCurrentLink = useCallback(async () => {
     if (!currentTab.url || !currentTab.title || isAlreadySavedAndUnread) return;
-    setStatus({ message: "Saving...", type: "info" });
+    showStatus("Saving...", "info");
     try {
       const client = getClient(config);
       await client.addLink({
@@ -272,26 +282,26 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
         title: currentTab.title,
         tags: [],
       });
-      setStatus({ message: "Saved!", type: "success" });
+      showStatus("Saved!", "success");
       await doRefreshLinks(config);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Save failed.";
-      setStatus({ message, type: "error" });
+      showStatus(message, "error");
     }
-  }, [config, currentTab, isAlreadySavedAndUnread, doRefreshLinks]);
+  }, [config, currentTab, isAlreadySavedAndUnread, doRefreshLinks, showStatus]);
 
   const handleToggleRead = useCallback(
-    async (id: string, isRead: boolean) => {
+    async (id: string, _isRead: boolean) => {
       try {
         const client = getClient(config);
-        await client.updateLink(id, { isRead: !isRead });
+        await client.updateLink(id, { isRead: !_isRead });
         await doRefreshLinks(config);
       } catch (_err) {
-        setStatus({ message: "Update failed.", type: "error" });
+        showStatus("Update failed.", "error");
       }
     },
-    [config, doRefreshLinks],
+    [config, doRefreshLinks, showStatus],
   );
 
   const handleDeleteLink = useCallback(
@@ -302,37 +312,37 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
         await client.deleteLink(id);
         await doRefreshLinks(config);
       } catch (_err) {
-        setStatus({ message: "Delete failed.", type: "error" });
+        showStatus("Delete failed.", "error");
       }
     },
-    [config, doRefreshLinks],
+    [config, doRefreshLinks, showStatus],
   );
 
   const handleMarkAllRead = useCallback(async () => {
     if (!confirm("Mark all links as read?")) return;
-    setStatus({ message: "Updating...", type: "info" });
+    showStatus("Updating...", "info");
     try {
       const client = getClient(config);
       await client.markAllAsRead();
-      setStatus({ message: "All marked as read!", type: "success" });
+      showStatus("All marked as read!", "success");
       await doRefreshLinks(config);
     } catch (_err) {
-      setStatus({ message: "Failed to update.", type: "error" });
+      showStatus("Failed to update.", "error");
     }
-  }, [config, doRefreshLinks]);
+  }, [config, doRefreshLinks, showStatus]);
 
   const handleDeleteAll = useCallback(async () => {
     if (!confirm("DANGER: Delete ALL links permanently?")) return;
-    setStatus({ message: "Deleting everything...", type: "info" });
+    showStatus("Deleting everything...", "info");
     try {
       const client = getClient(config);
       await client.deleteAllLinks();
-      setStatus({ message: "All links deleted.", type: "success" });
+      showStatus("All links deleted.", "success");
       await doRefreshLinks(config);
     } catch (_err) {
-      setStatus({ message: "Deletion failed.", type: "error" });
+      showStatus("Deletion failed.", "error");
     }
-  }, [config, doRefreshLinks]);
+  }, [config, doRefreshLinks, showStatus]);
 
   // -----------------------------------------------------------------------
   // Context value
@@ -347,6 +357,8 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       loading,
       testingConnection,
       status,
+      showStatus,
+      clearStatus,
       showSettings,
       setShowSettings,
       filter,
@@ -376,6 +388,8 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       loading,
       testingConnection,
       status,
+      showStatus,
+      clearStatus,
       showSettings,
       filter,
       sortBy,

@@ -4,7 +4,7 @@ import { useReadLater } from "../context/ReadLaterContext";
 export function StatusFooter() {
   const { status } = useReadLater();
 
-  if (!status.message) return null;
+  if (!status.visible || !status.text) return null;
 
   const bgColor =
     status.type === "error"
@@ -17,7 +17,7 @@ export function StatusFooter() {
     <footer
       className={`px-4 py-2 text-[10px] flex items-center gap-2 border-t border-border ${bgColor}`}
     >
-      <span className="font-bold">{status.message}</span>
+      <span className="font-bold">{status.text}</span>
     </footer>
   );
 }
