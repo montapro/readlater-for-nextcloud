@@ -14,6 +14,7 @@ import { ZodError } from "zod";
 const mockClient = {
   getDirectoryContents: vi.fn(),
   exists: vi.fn(),
+  stat: vi.fn(),
   getFileContents: vi.fn(),
   putFileContents: vi.fn(),
   createDirectory: vi.fn(),
@@ -38,6 +39,19 @@ function mockResponse(data: string, etag?: string) {
         name.toLowerCase() === "etag" ? (etag ?? null) : null,
     },
   };
+}
+
+/** Sets up all WebDAV mocks to simulate a store with the given links and etag. */
+function mockStore(links: Link[], etag = '"abc123"') {
+  mockClient.exists.mockResolvedValue(true);
+  mockClient.stat.mockResolvedValue({
+    data: { etag, filename: "/ReadLater/links.json", basename: "links.json", lastmod: new Date().toISOString(), size: 100, type: "file" },
+    headers: {},
+    status: 200,
+    statusText: "OK",
+  } as any);
+  mockClient.getFileContents.mockResolvedValue(JSON.stringify(sampleStore(links)));
+  mockClient.putFileContents.mockResolvedValue(true);
 }
 
 const validConfig: WebDAVConfig = {
@@ -241,19 +255,7 @@ describe("ReadLaterClient", () => {
     const linkData = { url: "https://example.com/new", title: "New Article", tags: [] };
 
     beforeEach(() => {
-      // Setup for internal fetchLinksWithETag + saveLinksInternal via customRequest
-      mockClient.exists.mockResolvedValue(true);
-      mockClient.customRequest.mockImplementation(async (_path: string, opts: { method: string; data?: string }) => {
-        if (opts.method === "GET") {
-          // Return empty store for fresh add
-          const store = sampleStore();
-          return mockResponse(JSON.stringify(store), '"abc123"');
-        }
-        if (opts.method === "PUT") {
-          return mockResponse("");
-        }
-        return mockResponse("");
-      });
+      mockStore([]);
     });
 
     it("adds a new link at the beginning of the list", async () => {
@@ -265,32 +267,19 @@ describe("ReadLaterClient", () => {
 
     it("returns existing link unchanged if already saved and unread", async () => {
       const existingLink = sampleLink({ url: linkData.url, isRead: false });
-      mockClient.customRequest.mockImplementation(async (_path: string, opts: { method: string; data?: string }) => {
-        if (opts.method === "GET") {
-          const store = sampleStore([existingLink]);
-          return mockResponse(JSON.stringify(store), '"abc123"');
-        }
-        return mockResponse("");
-      });
+      mockStore([existingLink]);
 
       const result = await client.addLink(linkData);
       expect(result.isRead).toBe(false);
-      // The PUT should still happen (withRetry saves after operation)
     });
 
     it("reactivates a read link when saved again", async () => {
       const readLink = sampleLink({ url: linkData.url, isRead: true, title: "Old Title" });
-      mockClient.customRequest.mockImplementation(async (_path: string, opts: { method: string; data?: string }) => {
-        if (opts.method === "GET") {
-          const store = sampleStore([readLink]);
-          return mockResponse(JSON.stringify(store), '"abc123"');
-        }
-        return mockResponse("");
-      });
+      mockStore([readLink]);
 
       const result = await client.addLink(linkData);
       expect(result.isRead).toBe(false);
-      expect(result.title).toBe(linkData.title); // title updated
+      expect(result.title).toBe(linkData.title);
     });
   });
 
@@ -300,17 +289,7 @@ describe("ReadLaterClient", () => {
     const link = sampleLink();
 
     beforeEach(() => {
-      mockClient.exists.mockResolvedValue(true);
-      mockClient.customRequest.mockImplementation(async (_path: string, opts: { method: string; data?: string }) => {
-        if (opts.method === "GET") {
-          const store = sampleStore([link]);
-          return mockResponse(JSON.stringify(store), '"abc123"');
-        }
-        if (opts.method === "PUT") {
-          return mockResponse("");
-        }
-        return mockResponse("");
-      });
+      mockStore([link]);
     });
 
     it("updates an existing link", async () => {
@@ -332,17 +311,7 @@ describe("ReadLaterClient", () => {
     const link = sampleLink();
 
     beforeEach(() => {
-      mockClient.exists.mockResolvedValue(true);
-      mockClient.customRequest.mockImplementation(async (_path: string, opts: { method: string; data?: string }) => {
-        if (opts.method === "GET") {
-          const store = sampleStore([link]);
-          return mockResponse(JSON.stringify(store), '"abc123"');
-        }
-        if (opts.method === "PUT") {
-          return mockResponse("");
-        }
-        return mockResponse("");
-      });
+      mockStore([link]);
     });
 
     it("removes a link", async () => {
@@ -359,23 +328,15 @@ describe("ReadLaterClient", () => {
     ];
 
     beforeEach(() => {
-      mockClient.exists.mockResolvedValue(true);
-      mockClient.customRequest.mockImplementation(async (_path: string, opts: { method: string; data?: string }) => {
-        if (opts.method === "GET") {
-          return mockResponse(JSON.stringify(sampleStore(links)), '"abc123"');
-        }
-        if (opts.method === "PUT") {
-          // Verify all links are marked read in the saved data
-          const saved = JSON.parse(opts.data as string);
-          expect(saved.links.every((l: Link) => l.isRead)).toBe(true);
-          return mockResponse("");
-        }
-        return mockResponse("");
-      });
+      mockStore(links);
     });
 
     it("marks all links as read", async () => {
       await expect(client.markAllAsRead()).resolves.toBeUndefined();
+      // Verify the saved data has all links marked as read
+      const savedArg = mockClient.putFileContents.mock.calls[0][1];
+      const saved = JSON.parse(savedArg as string);
+      expect(saved.links.every((l: Link) => l.isRead)).toBe(true);
     });
   });
 
@@ -383,23 +344,14 @@ describe("ReadLaterClient", () => {
 
   describe("deleteAllLinks", () => {
     beforeEach(() => {
-      mockClient.exists.mockResolvedValue(true);
-      mockClient.customRequest.mockImplementation(async (_path: string, opts: { method: string; data?: string }) => {
-        if (opts.method === "GET") {
-          const store = sampleStore([sampleLink()]);
-          return mockResponse(JSON.stringify(store), '"abc123"');
-        }
-        if (opts.method === "PUT") {
-          const saved = JSON.parse(opts.data as string);
-          expect(saved.links).toEqual([]);
-          return mockResponse("");
-        }
-        return mockResponse("");
-      });
+      mockStore([sampleLink()]);
     });
 
     it("deletes all links", async () => {
       await expect(client.deleteAllLinks()).resolves.toBeUndefined();
+      const savedArg = mockClient.putFileContents.mock.calls[0][1];
+      const saved = JSON.parse(savedArg as string);
+      expect(saved.links).toEqual([]);
     });
   });
 
@@ -408,24 +360,15 @@ describe("ReadLaterClient", () => {
   describe("optimistic concurrency", () => {
     it("retries on HTTP 412 conflict and succeeds on second attempt", async () => {
       let callCount = 0;
-      mockClient.exists.mockResolvedValue(true);
-      mockClient.customRequest.mockImplementation(async (_path: string, opts: { method: string; data?: string }) => {
-        if (opts.method === "GET") {
-          const store = sampleStore();
-          return mockResponse(JSON.stringify(store), '"abc123"');
+      mockStore([]);
+      mockClient.putFileContents.mockImplementation(async (_path: string, _data: string) => {
+        callCount++;
+        if (callCount === 1) {
+          const err = new Error("Precondition Failed") as any;
+          err.status = 412;
+          throw err;
         }
-        if (opts.method === "PUT") {
-          callCount++;
-          if (callCount === 1) {
-            // First attempt fails with 412 conflict
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const err = new Error("Precondition Failed") as any;
-            err.status = 412;
-            throw err;
-          }
-          return mockResponse("");
-        }
-        return mockResponse("");
+        return true;
       });
 
       const result = await client.addLink({
@@ -434,24 +377,14 @@ describe("ReadLaterClient", () => {
         tags: [],
       });
       expect(result.url).toBe("https://example.com/new");
-      expect(callCount).toBe(2); // First failed, second succeeded
+      expect(callCount).toBe(2);
     });
 
     it("throws after exhausting retries on persistent 412", async () => {
-      mockClient.exists.mockResolvedValue(true);
-      mockClient.customRequest.mockImplementation(async (_path: string, opts: { method: string; data?: string }) => {
-        if (opts.method === "GET") {
-          const store = sampleStore();
-          return mockResponse(JSON.stringify(store), '"abc123"');
-        }
-        if (opts.method === "PUT") {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const err = new Error("Precondition Failed") as any;
-          err.status = 412;
-          throw err;
-        }
-        return mockResponse("");
-      });
+      mockStore([]);
+      mockClient.putFileContents.mockRejectedValue(
+        Object.assign(new Error("Precondition Failed"), { status: 412 })
+      );
 
       await expect(
         client.addLink({

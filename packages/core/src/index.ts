@@ -1,4 +1,4 @@
-import { createClient, WebDAVClient, AuthType } from "webdav";
+import { createClient, WebDAVClient, AuthType, FileStat, ResponseDataDetailed } from "webdav";
 import { z, ZodError } from "zod";
 
 // --- Schema Definitions ---
@@ -129,7 +129,7 @@ export class ReadLaterClient {
   }
 
   /**
-   * Internal: fetches links with the ETag header for optimistic concurrency.
+   * Internal: fetches links with the ETag for optimistic concurrency.
    */
   private async fetchLinksWithETag(): Promise<FetchResult> {
     const fullPath = `${this.storagePath}/${this.fileName}`;
@@ -137,17 +137,18 @@ export class ReadLaterClient {
       return { store: { version: "1.0", links: [] }, etag: null };
     }
 
-    const result = await this.client.customRequest(fullPath, {
-      method: "GET",
+    // stat returns the ETag directly in FileStat.etag
+    const stat = await this.client.stat(fullPath, { details: true }) as ResponseDataDetailed<FileStat>;
+    const etag = stat.data.etag;
+
+    const content = (await this.client.getFileContents(fullPath, {
+      format: "text",
       headers: {
         "Cache-Control": "no-cache, no-store, must-revalidate",
         "Pragma": "no-cache",
       },
-    });
+    })) as string;
 
-    const content = await result.text();
-    // ETag header may be lowercased or title-cased depending on the server
-    const etag = result.headers.get("etag") ?? result.headers.get("ETag");
     const data = JSON.parse(content);
     const store = LinkStoreSchema.parse(data);
     return { store, etag };
@@ -161,17 +162,13 @@ export class ReadLaterClient {
     await this.ensureStorageExists();
 
     const fullPath = `${this.storagePath}/${this.fileName}`;
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
+    const headers: Record<string, string> = {};
     if (etag) {
       headers["If-Match"] = etag;
     }
 
-    await this.client.customRequest(fullPath, {
-      method: "PUT",
-      data: JSON.stringify(store, null, 2),
-      headers,
+    await this.client.putFileContents(fullPath, JSON.stringify(store, null, 2), {
+      headers: headers as any,
     });
   }
 
