@@ -1,10 +1,18 @@
 import React from "react";
 import { useReadLater } from "../context/ReadLaterContext";
-import { Settings, RefreshCw } from "lucide-react";
+import { Settings, RefreshCw, Save, CheckCircle2 } from "lucide-react";
 
 export function Header() {
-  const { loading, isConfigured, refreshLinks, showSettings, setShowSettings } =
-    useReadLater();
+  const {
+    loading,
+    isConfigured,
+    refreshLinks,
+    showSettings,
+    setShowSettings,
+    saveCurrentLink,
+    isAlreadySavedAndUnread,
+    status,
+  } = useReadLater();
 
   return (
     <header className="px-4 py-3 border-b flex items-center justify-between bg-card sticky top-0 z-10 shadow-sm border-border">
@@ -20,6 +28,20 @@ export function Header() {
         </h1>
       </div>
       <div className="flex items-center gap-1">
+        <button
+          onClick={saveCurrentLink}
+          disabled={
+            (status.visible && status.type === "info") || loading || !isConfigured || isAlreadySavedAndUnread
+          }
+          className="p-2 hover:bg-muted rounded-full transition-colors cursor-pointer disabled:cursor-default"
+          title="Save current tab"
+        >
+          {isAlreadySavedAndUnread ? (
+            <CheckCircle2 className="w-4 h-4 text-green-500" />
+          ) : (
+            <Save className="w-4 h-4 text-muted-foreground" />
+          )}
+        </button>
         <button
           onClick={refreshLinks}
           className={`p-2 hover:bg-muted rounded-full transition-colors cursor-pointer disabled:cursor-default ${loading ? "animate-spin" : ""}`}

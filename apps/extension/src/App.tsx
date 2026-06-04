@@ -4,7 +4,6 @@ import { Header } from "./components/Header";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { FilterBar } from "./components/FilterBar";
 import { LinkList } from "./components/LinkList";
-import { SaveBar } from "./components/SaveBar";
 import { StatusFooter } from "./components/StatusFooter";
 import { useReadLater } from "./context/ReadLaterContext";
 
@@ -28,15 +27,13 @@ function AppContent() {
 }
 
 /**
- * The main view (non-settings): filter bar, link list, save bar.
+ * The main view (non-settings): filter bar, link list.
  */
 function MainView() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <FilterBar />
       <LinkList />
-
-      <SaveBar />
     </div>
   );
 }
