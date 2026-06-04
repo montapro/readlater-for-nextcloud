@@ -12,6 +12,7 @@ import * as SecureStore from "expo-secure-store";
 import * as Crypto from "expo-crypto";
 import * as Linking from "expo-linking";
 import { ReadLaterClient, WebDAVConfig, Link } from "@readlater/core";
+import type { FilterType, SortType, StatusMessage } from "../types";
 
 // ---------------------------------------------------------------------------
 // Crypto polyfill for React Native (needed by @readlater/core)
@@ -28,21 +29,14 @@ if (!global.crypto?.randomUUID) {
 // Types
 // ---------------------------------------------------------------------------
 
-export type FilterType = "all" | "read" | "unread";
-export type SortType = "newest" | "oldest" | "alpha";
-
-export interface StatusMessage {
-  text: string;
-  type: "info" | "success" | "error";
-  visible: boolean;
-}
-
 interface ReadLaterContextValue {
   config: WebDAVConfig;
   updateConfig: (partial: Partial<WebDAVConfig>) => void;
   isConfigured: boolean;
   links: Link[];
   loading: boolean;
+  testingConnection: boolean;
+  isUrlValid: boolean;
   showSettings: boolean;
   setShowSettings: (show: boolean) => void;
   filter: FilterType;
@@ -56,6 +50,7 @@ interface ReadLaterContextValue {
   setShowAddModal: (show: boolean) => void;
   refreshLinks: () => Promise<void>;
   saveSettings: () => Promise<void>;
+  testConnection: () => Promise<void>;
   handleToggleRead: (id: string, isRead: boolean) => Promise<void>;
   handleDeleteLink: (id: string) => void;
   handleAddLink: (url: string, title?: string) => Promise<void>;
@@ -95,6 +90,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   const [isConfigured, setIsConfigured] = useState(false);
   const [links, setLinks] = useState<Link[]>([]);
   const [loading, setLoading] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [filter, setFilter] = useState<FilterType>("all");
   const [sortBy, setSortBy] = useState<SortType>("newest");
@@ -108,6 +104,11 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   const updateConfig = useCallback((partial: Partial<WebDAVConfig>) => {
     setConfig((prev) => ({ ...prev, ...partial }));
   }, []);
+
+  const isUrlValid = useMemo(
+    () => config.url.trim().startsWith("https://"),
+    [config.url],
+  );
 
   // -----------------------------------------------------------------------
   // Status helpers
@@ -207,6 +208,27 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   const refreshLinks = useCallback(async () => {
     await doRefreshLinks(config);
   }, [config, doRefreshLinks]);
+
+  const testConnection = useCallback(async () => {
+    setTestingConnection(true);
+    showStatus("Testing connection...", "info");
+    try {
+      const client = getClient(config);
+      const result = await client.verifyConnection();
+      if (result.ok) {
+        showStatus("Connection successful!", "success");
+      } else {
+        showStatus(
+          result.error || "Connection failed. Check your data.",
+          "error",
+        );
+      }
+    } catch (_err) {
+      showStatus("Test failed. Check URL and credentials.", "error");
+    } finally {
+      setTestingConnection(false);
+    }
+  }, [config, showStatus]);
 
   const saveSettings = useCallback(async () => {
     try {
@@ -334,6 +356,8 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       isConfigured,
       links,
       loading,
+      testingConnection,
+      isUrlValid,
       showSettings,
       setShowSettings,
       filter,
@@ -347,6 +371,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       setShowAddModal,
       refreshLinks,
       saveSettings,
+      testConnection,
       handleToggleRead,
       handleDeleteLink,
       handleAddLink,
@@ -360,6 +385,8 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       isConfigured,
       links,
       loading,
+      testingConnection,
+      isUrlValid,
       showSettings,
       filter,
       sortBy,
@@ -369,6 +396,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       showAddModal,
       refreshLinks,
       saveSettings,
+      testConnection,
       handleToggleRead,
       handleDeleteLink,
       handleAddLink,

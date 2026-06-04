@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { useReadLater, FilterType, SortType } from "../context/ReadLaterContext";
+import { useReadLater } from "../context/ReadLaterContext";
+import type { FilterType, SortType } from "../types";
 import { useTheme } from "../hooks/useTheme";
 import { Plus } from "lucide-react-native";
 
