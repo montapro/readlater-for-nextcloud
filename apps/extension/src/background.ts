@@ -63,7 +63,7 @@ browser.tabs.onActivated.addListener(async (activeInfo) => {
   updateTabBadge(activeInfo.tabId, tab.url);
 });
 
-// REAKTIVITÄT: Auf Speicheränderungen reagieren
+// React to storage changes – re-sync when config changes
 browser.storage.onChanged.addListener((changes) => {
   if (changes.webdav_url || changes.webdav_user || changes.webdav_pass) {
     syncLinks();
