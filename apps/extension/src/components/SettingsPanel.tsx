@@ -1,6 +1,5 @@
 import React from "react";
 import { useReadLater } from "../context/ReadLaterContext";
-import { useTheme } from "../hooks/useTheme";
 import {
   Link2,
   User,
@@ -22,8 +21,9 @@ export function SettingsPanel() {
     saveSettings,
     loading,
     testingConnection,
+    theme,
+    setTheme,
   } = useReadLater();
-  const { theme, setTheme } = useTheme();
 
   return (
     <div className="p-4 space-y-6 animate-in fade-in slide-in-from-top-2 overflow-y-auto">

@@ -10,6 +10,7 @@ import React, {
 import browser from "webextension-polyfill";
 import { ReadLaterClient, WebDAVConfig, Link } from "@readlater/core";
 import type { FilterType, SortType, StatusMessage } from "../types";
+import { useTheme } from "../hooks/useTheme";
 
 // ---------------------------------------------------------------------------
 // Context value type
@@ -33,6 +34,8 @@ interface ReadLaterContextValue {
   setSortBy: (s: SortType) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
+  theme: "system" | "light" | "dark";
+  setTheme: (t: "system" | "light" | "dark") => void;
   currentTab: { url?: string; title?: string };
   isUrlValid: boolean;
   isAlreadySavedAndUnread: boolean;
@@ -94,6 +97,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   const [filter, setFilter] = useState<FilterType>("all");
   const [sortBy, setSortBy] = useState<SortType>("newest");
   const [searchQuery, setSearchQuery] = useState("");
+  const { theme, setTheme } = useTheme();
   const [currentTab, setCurrentTab] = useState<{
     url?: string;
     title?: string;
@@ -406,6 +410,8 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       setSortBy,
       searchQuery,
       setSearchQuery,
+      theme,
+      setTheme,
       currentTab,
       isUrlValid,
       isAlreadySavedAndUnread,
@@ -434,6 +440,8 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       sortBy,
       searchQuery,
       setSearchQuery,
+      theme,
+      setTheme,
       currentTab,
       isUrlValid,
       isAlreadySavedAndUnread,
