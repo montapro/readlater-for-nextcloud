@@ -53,7 +53,7 @@ export function SaveBar() {
       <button
         onClick={saveCurrentLink}
         disabled={
-          status.type === "info" || loading || !isConfigured || isAlreadySavedAndUnread
+          (status.visible && status.type === "info") || loading || !isConfigured || isAlreadySavedAndUnread
         }
         className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all shadow-lg active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 cursor-pointer disabled:cursor-default ${
           isAlreadySavedAndUnread
