@@ -11,11 +11,12 @@ export function StatusBanner() {
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+
     if (status.visible) {
       setRendered(true);
       opacity.setValue(1);
 
-      if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
         Animated.timing(opacity, {
           toValue: 0,
@@ -31,7 +32,7 @@ export function StatusBanner() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [status.visible]);
+  }, [status.text, status.type, status.visible, clearStatus, opacity]);
 
   if (!rendered && !status.visible) return null;
 
