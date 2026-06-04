@@ -55,7 +55,7 @@ export function Header() {
           className={`p-2 rounded-full transition-colors cursor-pointer ${showSettings ? "bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground"}`}
           title="Settings"
         >
-          <Settings className="w-5 h-5" />
+          <Settings className="w-4 h-4" />
         </button>
       </div>
     </header>
