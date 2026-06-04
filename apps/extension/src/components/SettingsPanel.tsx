@@ -39,7 +39,7 @@ export function SettingsPanel() {
               placeholder="WebDAV URL"
               value={config.url}
               onChange={(e) => updateConfig({ url: e.target.value })}
-              className="w-full pl-9 pr-3 py-2 text-sm border bg-card rounded-lg focus:ring-2 focus:ring-primary/20 outline-none border-border font-mono text-[11px]"
+              className="w-full pl-9 pr-3 py-2 text-sm border bg-card rounded-lg focus:ring-2 focus:ring-primary/20 outline-none border-border"
             />
           </div>
           <div className="relative">

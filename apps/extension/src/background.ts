@@ -2,7 +2,8 @@ import browser from "webextension-polyfill";
 import { ReadLaterClient, WebDAVConfig, Link } from "@readlater/core";
 
 /**
- * Updates the extension icon (badge) based on whether the current URL is already saved.
+ * Updates the extension badge: shows unread count (blue) or green checkmark
+ * when the current tab is already saved and unread.
  */
 async function updateTabBadge(tabId: number, url?: string) {
   if (!url) {
@@ -12,14 +13,21 @@ async function updateTabBadge(tabId: number, url?: string) {
 
   const data = await browser.storage.local.get(["links_cache"]);
   const links = (data.links_cache as Link[]) || [];
-  
-  const isSavedAndUnread = links.some(l => l.url === url && !l.isRead);
-  
-  if (isSavedAndUnread) {
+
+  const unreadCount = links.filter(l => !l.isRead).length;
+  if (unreadCount === 0) {
+    browser.action.setBadgeText({ text: "", tabId });
+    return;
+  }
+
+  const isCurrentSavedAndUnread = links.some(l => l.url === url && !l.isRead);
+
+  if (isCurrentSavedAndUnread) {
     browser.action.setBadgeBackgroundColor({ color: "#10b981", tabId });
     browser.action.setBadgeText({ text: "✓", tabId });
   } else {
-    browser.action.setBadgeText({ text: "", tabId });
+    browser.action.setBadgeBackgroundColor({ color: "#2563eb", tabId });
+    browser.action.setBadgeText({ text: String(Math.min(unreadCount, 99)), tabId });
   }
 }
 
