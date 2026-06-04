@@ -192,6 +192,17 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   }, [filter, sortBy]);
 
   // -----------------------------------------------------------------------
+  // Auto-dismiss status after 3s for non-error messages
+  // -----------------------------------------------------------------------
+
+  useEffect(() => {
+    if (status.visible && status.type !== "error") {
+      const timer = setTimeout(() => clearStatus(), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [status.visible, status.type, clearStatus]);
+
+  // -----------------------------------------------------------------------
   // Actions
   // -----------------------------------------------------------------------
 

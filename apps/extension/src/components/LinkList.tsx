@@ -55,10 +55,10 @@ export function LinkList() {
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-1">
           {filter === "all"
-            ? "All Links"
+            ? `All Links (${processedLinks.length})`
             : filter === "read"
-              ? "Read Links"
-              : "Unread Links"}
+              ? `Read (${processedLinks.length})`
+              : `Unread (${processedLinks.length})`}
         </h2>
         {links.length > 0 && (
           <div className="flex items-center gap-2">
