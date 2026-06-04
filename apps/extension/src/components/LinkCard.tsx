@@ -9,14 +9,17 @@ interface Props {
 }
 
 export function LinkCard({ link }: Props) {
-  const { handleToggleRead, handleDeleteLink } = useReadLater();
+  const { handleToggleRead, handleDeleteLink, currentTab } = useReadLater();
+  const isCurrentTab = currentTab.url === link.url;
 
   return (
     <div
       className={`p-3 rounded-xl border flex flex-col gap-2 transition-all group ${
         link.isRead
           ? "bg-muted/30 opacity-60"
-          : "bg-card shadow-sm border-border hover:border-primary/30"
+          : isCurrentTab
+            ? "bg-card shadow-sm border-green-500/70 hover:border-green-500"
+            : "bg-card shadow-sm border-border hover:border-primary/30"
       }`}
     >
       <div className="flex-1 min-w-0">
