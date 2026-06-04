@@ -4,6 +4,7 @@ import { Link as LinkType } from "@readlater/core";
 import { useReadLater } from "../context/ReadLaterContext";
 import { useTheme } from "../hooks/useTheme";
 import { Link2, ExternalLink, CheckCircle, Trash2 } from "lucide-react-native";
+import { formatDate } from "../utils";
 
 interface Props {
   link: LinkType;
@@ -56,6 +57,7 @@ export function LinkCard({ link }: Props) {
               ))}
             </View>
           )}
+          <Text style={[styles.date, { color: colors.textMuted }]}>{formatDate(link.addedAt)}</Text>
         </View>
       </View>
 
@@ -128,6 +130,10 @@ const styles = StyleSheet.create({
   tagText: {
     fontSize: 10,
     fontWeight: "600",
+  },
+  date: {
+    fontSize: 11,
+    marginTop: 4,
   },
   cardActions: {
     flexDirection: "row",
