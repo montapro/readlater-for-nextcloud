@@ -141,6 +141,9 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
           "webdav_url",
           "webdav_user",
           "webdav_pass",
+          "draft_url",
+          "draft_user",
+          "draft_pass",
           "links_cache",
           "pref_filter",
           "pref_sortBy",
@@ -160,6 +163,14 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
           setIsConfigured(true);
           doRefreshLinks(loadedConfig);
         } else {
+          // Restore draft form data (auto-saved but never committed)
+          if (result.draft_url) {
+            setConfig({
+              url: result.draft_url as string,
+              username: (result.draft_user as string) || "",
+              password: (result.draft_pass as string) || "",
+            });
+          }
           setShowSettings(true);
         }
       } catch (err) {
@@ -201,6 +212,21 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       return () => clearTimeout(timer);
     }
   }, [status.visible, status.type, clearStatus]);
+
+  // -----------------------------------------------------------------------
+  // Auto-save draft settings on every form change (debounced)
+  // -----------------------------------------------------------------------
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      browser.storage.local.set({
+        draft_url: config.url,
+        draft_user: config.username,
+        draft_pass: config.password,
+      }).catch(() => {});
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [config.url, config.username, config.password]);
 
   // -----------------------------------------------------------------------
   // Actions
@@ -276,6 +302,8 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
 
       setShowSettings(false);
       showStatus("Settings saved!", "success");
+      // Drafts no longer needed – committed config is authoritative
+      await browser.storage.local.remove(["draft_url", "draft_user", "draft_pass"]);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Save failed.";
