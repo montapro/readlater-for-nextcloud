@@ -12,6 +12,7 @@ import { LinkList } from "./src/components/LinkList";
 import { BottomBar } from "./src/components/BottomBar";
 import { StatusBanner } from "./src/components/StatusBanner";
 import { AddLinkModal } from "./src/components/AddLinkModal";
+import { ErrorBoundary } from "./src/components/ErrorBoundary";
 
 function AppContent() {
   const { showSettings } = useReadLater();
@@ -38,9 +39,11 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ReadLaterProvider>
-      <AppContent />
-    </ReadLaterProvider>
+    <ErrorBoundary>
+      <ReadLaterProvider>
+        <AppContent />
+      </ReadLaterProvider>
+    </ErrorBoundary>
   );
 }
 
