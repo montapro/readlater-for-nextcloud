@@ -94,7 +94,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
 
   // --- UI state ---
   const [showSettings, setShowSettings] = useState(false);
-  const [filter, setFilter] = useState<FilterType>("all");
+  const [filter, setFilter] = useState<FilterType>("unread");
   const [sortBy, setSortBy] = useState<SortType>("newest");
   const [searchQuery, setSearchQuery] = useState("");
   const { theme, setTheme } = useTheme();

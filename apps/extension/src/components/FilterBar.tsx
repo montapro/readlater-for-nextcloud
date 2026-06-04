@@ -3,7 +3,7 @@ import { useReadLater } from "../context/ReadLaterContext";
 import type { FilterType, SortType } from "../types";
 import { Search } from "lucide-react";
 
-const filters: FilterType[] = ["all", "unread", "read"];
+const filters: FilterType[] = ["unread", "read", "all"];
 const sortOptions: { value: SortType; label: string }[] = [
   { value: "newest", label: "Newest" },
   { value: "oldest", label: "Oldest" },

@@ -5,7 +5,7 @@ import type { FilterType, SortType } from "../types";
 import { useTheme } from "../hooks/useTheme";
 import { Plus } from "lucide-react-native";
 
-const filters: FilterType[] = ["all", "unread", "read"];
+const filters: FilterType[] = ["unread", "read", "all"];
 const sortOptions: { value: SortType; label: string }[] = [
   { value: "newest", label: "Newest" },
   { value: "oldest", label: "Oldest" },
