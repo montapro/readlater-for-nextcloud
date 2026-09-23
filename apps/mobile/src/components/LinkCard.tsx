@@ -11,8 +11,13 @@ interface Props {
 }
 
 export function LinkCard({ link }: Props) {
-  const { handleOpenLink, handleToggleRead, handleDeleteLink, setEditingLink } =
-    useReadLater();
+  const {
+    handleOpenLink,
+    handleToggleRead,
+    handleDeleteLink,
+    setEditingLink,
+    setShowAddModal,
+  } = useReadLater();
   const { colors } = useTheme();
   const [faviconFailed, setFaviconFailed] = useState(false);
 
@@ -78,7 +83,7 @@ export function LinkCard({ link }: Props) {
           <Trash2 color={colors.destructive} size={18} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.actionButton, { borderRightColor: colors.border }]} onPress={() => setEditingLink(link)}>
+        <TouchableOpacity style={[styles.actionButton, { borderRightColor: colors.border }]} onPress={() => { setEditingLink(link); setShowAddModal(true); }}>
           <Pencil color={colors.textSecondary} size={18} />
         </TouchableOpacity>
 
