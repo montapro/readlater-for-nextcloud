@@ -73,9 +73,9 @@ export function LinkCard({ link }: Props) {
       </View>
 
       <View style={[styles.cardActions, { backgroundColor: colors.cardActionsBg, borderTopColor: colors.border }]}>
-        <TouchableOpacity style={[styles.actionButton, { borderRightColor: colors.border }]} onPress={() => handleOpenLink(link.url)}>
-          <ExternalLink color={colors.textSecondary} size={18} />
-          <Text style={[styles.actionText, { color: colors.textSecondary }]}>Open</Text>
+        <TouchableOpacity style={[styles.actionButton, { borderRightColor: colors.border }]} onPress={() => handleDeleteLink(link.id)}>
+          <Trash2 color={colors.destructive} size={18} />
+          <Text style={[styles.actionText, { color: colors.destructive }]}>Delete</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.actionButton, { borderRightColor: colors.border }]} onPress={() => handleToggleRead(link.id, link.isRead)}>
@@ -85,9 +85,9 @@ export function LinkCard({ link }: Props) {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.actionButton, { borderRightWidth: 0 }]} onPress={() => handleDeleteLink(link.id)}>
-          <Trash2 color={colors.destructive} size={18} />
-          <Text style={[styles.actionText, { color: colors.destructive }]}>Delete</Text>
+        <TouchableOpacity style={[styles.actionButton, { borderRightWidth: 0 }]} onPress={() => handleOpenLink(link.url)}>
+          <ExternalLink color={colors.textSecondary} size={18} />
+          <Text style={[styles.actionText, { color: colors.textSecondary }]}>Open</Text>
         </TouchableOpacity>
       </View>
     </View>
