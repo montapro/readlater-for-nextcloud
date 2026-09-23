@@ -20,7 +20,10 @@ export function BottomBar() {
       ]}
     >
       <TouchableOpacity
-        style={styles.tabButton}
+        style={[
+          styles.tabButton,
+          !showSettings && { backgroundColor: colors.tabActiveBg },
+        ]}
         onPress={() => setShowSettings(false)}
       >
         <View>
@@ -44,7 +47,10 @@ export function BottomBar() {
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={styles.tabButton}
+        style={[
+          styles.tabButton,
+          showSettings && { backgroundColor: colors.tabActiveBg },
+        ]}
         onPress={() => setShowSettings(true)}
       >
         <Settings color={activeColor(showSettings)} size={24} />
@@ -57,12 +63,16 @@ const styles = StyleSheet.create({
   bottomBar: {
     flexDirection: "row",
     borderTopWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    gap: 6,
   },
   tabButton: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
   },
   badge: {
     position: "absolute",

@@ -18,6 +18,7 @@ export interface AppColors {
   cardActionsBg: string;
   buttonBg: string;
   iconBg: string;
+  tabActiveBg: string;
 }
 
 const light: AppColors = {
@@ -38,6 +39,7 @@ const light: AppColors = {
   cardActionsBg: "#fafafa",
   buttonBg: "#eff6ff",
   iconBg: "#eff6ff",
+  tabActiveBg: "#f1f5f9",
 };
 
 const dark: AppColors = {
@@ -58,6 +60,7 @@ const dark: AppColors = {
   cardActionsBg: "#1a2332",
   buttonBg: "#1e3a5f",
   iconBg: "#1e3a5f",
+  tabActiveBg: "#334155",
 };
 
 export function useTheme() {
