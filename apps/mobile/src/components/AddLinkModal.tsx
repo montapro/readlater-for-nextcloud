@@ -125,6 +125,7 @@ export function AddLinkModal() {
             autoCorrect={false}
             keyboardType="url"
             autoFocus
+            clearButtonMode="while-editing"
             value={url}
             onChangeText={(t) => {
               setUrl(t);
@@ -152,6 +153,7 @@ export function AddLinkModal() {
               ]}
               placeholder="Article title (optional)"
               placeholderTextColor={colors.textMuted}
+              clearButtonMode="while-editing"
               value={title}
               onChangeText={setTitle}
             />
