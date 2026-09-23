@@ -382,6 +382,9 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
             if (meta.faviconUrl) {
               updates.faviconUrl = meta.faviconUrl;
             }
+            if (meta.faviconData) {
+              updates.faviconData = meta.faviconData;
+            }
             if (Object.keys(updates).length === 0) return;
             await client.updateLink(savedLink.id, updates);
             await doRefreshLinks(config);

@@ -12,6 +12,7 @@ export const LinkSchema = z.object({
   tags: z.array(z.string()).default([]),
   isRead: z.boolean().default(false),
   faviconUrl: z.string().optional(),
+  faviconData: z.string().optional(),
 });
 
 export type Link = z.infer<typeof LinkSchema>;
@@ -240,6 +241,7 @@ export class ReadLaterClient {
         existing.addedAt = new Date().toISOString();
         existing.title = linkData.title;
         if (linkData.faviconUrl) existing.faviconUrl = linkData.faviconUrl;
+        if (linkData.faviconData) existing.faviconData = linkData.faviconData;
         store.links.splice(existingIndex, 1);
         store.links.unshift(existing);
         return existing;
