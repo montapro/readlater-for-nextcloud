@@ -8,16 +8,33 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { useReadLater } from "../context/ReadLaterContext";
 import { useTheme } from "../hooks/useTheme";
-import { Save, X } from "lucide-react-native";
+import { Save, X, CloudDownload } from "lucide-react-native";
+import { fetchPageMetadata } from "../utils/metadata";
 
 export function AddLinkModal() {
   const { showAddModal, setShowAddModal, handleAddLink } = useReadLater();
   const { colors } = useTheme();
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
+  const [isFetching, setIsFetching] = useState(false);
+
+  const handleFetch = async () => {
+    const trimmedUrl = url.trim();
+    if (!trimmedUrl || isFetching) return;
+    setIsFetching(true);
+    try {
+      const meta = await fetchPageMetadata(trimmedUrl);
+      if (meta.title && !title.trim()) {
+        setTitle(meta.title);
+      }
+    } finally {
+      setIsFetching(false);
+    }
+  };
 
   const handleSave = async () => {
     const trimmedUrl = url.trim();
@@ -78,20 +95,41 @@ export function AddLinkModal() {
 
           {/* Title input */}
           <Text style={[styles.label, { color: colors.textSecondary }]}>Title</Text>
-          <TextInput
-            style={[
-              styles.input,
-              {
-                backgroundColor: colors.background,
-                borderColor: colors.inputBorder,
-                color: colors.text,
-              },
-            ]}
-            placeholder="Article title (optional)"
-            placeholderTextColor={colors.textMuted}
-            value={title}
-            onChangeText={setTitle}
-          />
+          <View style={styles.titleRow}>
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  flex: 1,
+                  backgroundColor: colors.background,
+                  borderColor: colors.inputBorder,
+                  color: colors.text,
+                },
+              ]}
+              placeholder="Article title (optional)"
+              placeholderTextColor={colors.textMuted}
+              value={title}
+              onChangeText={setTitle}
+            />
+            <TouchableOpacity
+              style={[
+                styles.fetchButton,
+                {
+                  backgroundColor: colors.inputBg,
+                  borderColor: colors.inputBorder,
+                  opacity: url.trim() && !title.trim() && !isFetching ? 1 : 0.4,
+                },
+              ]}
+              onPress={handleFetch}
+              disabled={!url.trim() || !!title.trim() || isFetching}
+            >
+              {isFetching ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <CloudDownload color={colors.primary} size={20} />
+              )}
+            </TouchableOpacity>
+          </View>
 
           {/* Actions */}
           <View style={styles.actions}>
@@ -153,6 +191,19 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 14,
     fontSize: 15,
+  },
+  titleRow: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+  },
+  fetchButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   actions: {
     flexDirection: "row",
