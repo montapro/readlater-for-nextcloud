@@ -14,7 +14,7 @@
   "dependencies": {
     "@readlater/core": "workspace:*",
     "expo": "58.0.0-preview.5",
-    "expo-background-fetch": "~58.0.5",
+    "expo-background-task": "~58.0.6",
     "expo-crypto": "~58.0.2",
     "expo-linking": "~58.0.5",
     "expo-notifications": "~58.0.5",

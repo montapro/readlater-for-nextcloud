@@ -1,4 +1,4 @@
-import * as BackgroundFetch from "expo-background-fetch";
+import * as BackgroundTask from "expo-background-task";
 import * as TaskManager from "expo-task-manager";
 import * as SecureStore from "expo-secure-store";
 import * as Notifications from "expo-notifications";
@@ -16,7 +16,7 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK, async () => {
     ]);
 
     if (!url) {
-      return BackgroundFetch.BackgroundFetchResult.NoData;
+      return BackgroundTask.BackgroundTaskResult.Success;
     }
 
     const config: WebDAVConfig = {
@@ -37,10 +37,10 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK, async () => {
       // Badge update is best-effort in the background
     }
 
-    return BackgroundFetch.BackgroundFetchResult.NewData;
+    return BackgroundTask.BackgroundTaskResult.Success;
   } catch (error) {
     console.error("ReadLater: background sync failed", error);
-    return BackgroundFetch.BackgroundFetchResult.Failed;
+    return BackgroundTask.BackgroundTaskResult.Failed;
   }
 });
 
@@ -48,7 +48,7 @@ export async function registerBackgroundSyncAsync(
   minimumInterval: number
 ): Promise<void> {
   try {
-    await BackgroundFetch.registerTaskAsync(BACKGROUND_SYNC_TASK, {
+    await BackgroundTask.registerTaskAsync(BACKGROUND_SYNC_TASK, {
       minimumInterval,
     });
   } catch (error) {
@@ -62,7 +62,7 @@ export async function unregisterBackgroundSyncAsync(): Promise<void> {
       BACKGROUND_SYNC_TASK
     );
     if (isRegistered) {
-      await BackgroundFetch.unregisterTaskAsync(BACKGROUND_SYNC_TASK);
+      await BackgroundTask.unregisterTaskAsync(BACKGROUND_SYNC_TASK);
     }
   } catch (error) {
     console.error("ReadLater: failed to unregister background sync", error);

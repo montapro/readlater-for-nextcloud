@@ -104,9 +104,9 @@ importers:
       expo:
         specifier: 58.0.0-preview.5
         version: 58.0.0-preview.5(@babel/core@7.29.7)(@expo/dom-webview@58.0.1)(react-dom@19.2.7(react@19.3.0))(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
-      expo-background-fetch:
-        specifier: ~58.0.5
-        version: 58.0.5(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))
+      expo-background-task:
+        specifier: ~58.0.6
+        version: 58.0.6(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))
       expo-crypto:
         specifier: ~58.0.2
         version: 58.0.2(expo@58.0.0-preview.5)
@@ -2149,8 +2149,8 @@ packages:
       react: '*'
       react-native: '*'
 
-  expo-background-fetch@58.0.5:
-    resolution: {integrity: sha512-ipzUeyvKlayZl/8Go4skMG49EUKSmOpAOBdrGZOUeHADBUIVsMzkpOdGGFEECL3pk3YmWtH0w0DzM1UvbJu21w==}
+  expo-background-task@58.0.6:
+    resolution: {integrity: sha512-xep/VI0XjV8p/SVpbXW8lBmwNi4F6ovm0VMMTQMHhIpce0xPO2vbv46//HFX514W2FxBIAlP7SVyo0rDXupZHg==}
     peerDependencies:
       expo: '*'
 
@@ -2235,6 +2235,12 @@ packages:
 
   expo-task-manager@58.0.6:
     resolution: {integrity: sha512-gEyar5eiOYUxhAGbkcH8foECPxHm0AJtVMxi5Pnn9BP94YBcr8MtddyYUih7SCswfK6VVXIOXD9t9zAtnJah/w==}
+    peerDependencies:
+      expo: '*'
+      react-native: '*'
+
+  expo-task-manager@58.0.7:
+    resolution: {integrity: sha512-b9RGAjMgmSwELM1KQaSsNTC5PUt+ncq9pH3qN1WvQRP/xpfSsrYCmPIpLznkLVUOsoid1HNxfAMUx9XlsFgUMQ==}
     peerDependencies:
       expo: '*'
       react-native: '*'
@@ -5864,10 +5870,10 @@ snapshots:
       - supports-color
       - typescript
 
-  expo-background-fetch@58.0.5(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0)):
+  expo-background-task@58.0.6(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0)):
     dependencies:
       expo: 58.0.0-preview.5(@babel/core@7.29.7)(@expo/dom-webview@58.0.1)(react-dom@19.2.7(react@19.3.0))(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
-      expo-task-manager: 58.0.6(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))
+      expo-task-manager: 58.0.7(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))
     transitivePeerDependencies:
       - react-native
 
@@ -5961,6 +5967,12 @@ snapshots:
       react-native: 0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0)
 
   expo-task-manager@58.0.6(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0)):
+    dependencies:
+      expo: 58.0.0-preview.5(@babel/core@7.29.7)(@expo/dom-webview@58.0.1)(react-dom@19.2.7(react@19.3.0))(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+      react-native: 0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0)
+      unimodules-app-loader: 58.0.0
+
+  expo-task-manager@58.0.7(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0)):
     dependencies:
       expo: 58.0.0-preview.5(@babel/core@7.29.7)(@expo/dom-webview@58.0.1)(react-dom@19.2.7(react@19.3.0))(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
       react-native: 0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0)

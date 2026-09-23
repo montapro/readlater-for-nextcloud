@@ -17,7 +17,7 @@ import type { FilterType, SortType, StatusMessage, RefreshInterval } from "../ty
 import {
   DEFAULT_REFRESH_INTERVAL,
   intervalToMs,
-  intervalToBackgroundSeconds,
+  intervalToBackgroundMinutes,
 } from "../refreshIntervals";
 import {
   registerBackgroundSyncAsync,
@@ -416,17 +416,17 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(timer);
   }, [isConfigured, appState, refreshInterval, refreshLinks]);
 
-  // Register/unregister the iOS background fetch task based on the interval
+  // Register/unregister the iOS background task based on the interval
   useEffect(() => {
     if (!isConfigured) {
       unregisterBackgroundSyncAsync();
       return;
     }
-    const seconds = intervalToBackgroundSeconds(refreshInterval);
-    if (seconds == null) {
+    const minutes = intervalToBackgroundMinutes(refreshInterval);
+    if (minutes == null) {
       unregisterBackgroundSyncAsync();
     } else {
-      registerBackgroundSyncAsync(seconds);
+      registerBackgroundSyncAsync(minutes);
     }
   }, [isConfigured, refreshInterval]);
 

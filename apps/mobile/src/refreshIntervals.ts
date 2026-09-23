@@ -20,12 +20,12 @@ export function intervalToMs(interval: RefreshInterval): number | null {
   return REFRESH_INTERVAL_OPTIONS.find((o) => o.value === interval)?.ms ?? null;
 }
 
-export function intervalToBackgroundSeconds(
+export function intervalToBackgroundMinutes(
   interval: RefreshInterval
 ): number | null {
   if (interval === "manual") return null;
-  if (interval === "60min") return 3600;
-  // iOS Background Fetch minimum is ~15 minutes, so shorter intervals are
+  if (interval === "60min") return 60;
+  // iOS Background Task minimum is ~15 minutes, so shorter intervals are
   // clamped to 15 minutes for the background task (the exact timer runs in-app).
-  return 900;
+  return 15;
 }
