@@ -378,9 +378,11 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   // Badge, auto-refresh and background sync
   // -----------------------------------------------------------------------
 
-  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
-  const [appState, setAppState] = useState<AppStateStatus>(
-    AppState.currentState
+  const appStateRef = useRef<AppStateStatus | null>(
+    (AppState.currentState as AppStateStatus | null) ?? null
+  );
+  const [appState, setAppState] = useState<AppStateStatus | null>(
+    (AppState.currentState as AppStateStatus | null) ?? null
   );
 
   // Update the app icon badge whenever the unread count changes (iOS only)

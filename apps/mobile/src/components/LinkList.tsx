@@ -68,7 +68,7 @@ export function LinkList() {
                 </TouchableOpacity>
               </View>
             </View>
-          ) : null
+          ) : undefined
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>

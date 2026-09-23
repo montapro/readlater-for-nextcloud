@@ -8,7 +8,7 @@ export function StatusBanner() {
   const { colors } = useTheme();
   const [rendered, setRendered] = useState(false);
   const opacity = useRef(new Animated.Value(0)).current;
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
