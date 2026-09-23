@@ -8,11 +8,20 @@ import {
 } from "react-native";
 import { useReadLater } from "../context/ReadLaterContext";
 import { useTheme } from "../hooks/useTheme";
+import { REFRESH_INTERVAL_OPTIONS } from "../refreshIntervals";
 import { Save, Wifi } from "lucide-react-native";
 
 export function SettingsPanel() {
-  const { config, updateConfig, saveSettings, testConnection, testingConnection, isUrlValid } =
-    useReadLater();
+  const {
+    config,
+    updateConfig,
+    saveSettings,
+    testConnection,
+    testingConnection,
+    isUrlValid,
+    refreshInterval,
+    setRefreshInterval,
+  } = useReadLater();
   const { colors } = useTheme();
   const hasUrl = config.url.trim().length > 0;
 
@@ -115,6 +124,44 @@ export function SettingsPanel() {
           <Text style={styles.buttonText}>Save</Text>
         </TouchableOpacity>
       </View>
+
+      <View style={[styles.refreshSection, { borderTopColor: colors.border }]}>
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+          Auto Refresh
+        </Text>
+        <View style={styles.refreshOptions}>
+          {REFRESH_INTERVAL_OPTIONS.map((option) => {
+            const active = refreshInterval === option.value;
+            return (
+              <TouchableOpacity
+                key={option.value}
+                onPress={() => setRefreshInterval(option.value)}
+                style={[
+                  styles.refreshChip,
+                  {
+                    backgroundColor: active ? colors.primary : colors.inputBg,
+                    borderColor: active ? colors.primary : colors.inputBorder,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.refreshChipText,
+                    { color: active ? "#fff" : colors.textSecondary },
+                  ]}
+                >
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <Text style={[styles.refreshHint, { color: colors.textMuted }]}>
+          While the app is open it refreshes on this schedule. In the
+          background, iOS controls the timing (best effort, at least every 15
+          minutes).
+        </Text>
+      </View>
     </View>
   );
 }
@@ -178,5 +225,30 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
     fontSize: 14,
+  },
+  refreshSection: {
+    borderTopWidth: 1,
+    paddingTop: 16,
+    marginTop: 8,
+  },
+  refreshOptions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  refreshChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  refreshChipText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  refreshHint: {
+    fontSize: 11,
+    marginTop: 8,
+    lineHeight: 15,
   },
 });

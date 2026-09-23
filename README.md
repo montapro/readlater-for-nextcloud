@@ -39,6 +39,7 @@ readlater-for-nextcloud/
 | **Icons** | Lucide React (web) / Lucide React Native (mobile) |
 | **WebDAV** | webdav v5 (HTTP client) |
 | **Validation** | Zod (runtime schema validation) |
+| **Background (mobile)** | expo-notifications (badge), expo-background-fetch + expo-task-manager (iOS sync) |
 | **Testing** | Vitest (31 unit tests) |
 | **Linting** | ESLint 9 flat config + typescript-eslint |
 
@@ -70,6 +71,10 @@ readlater-for-nextcloud/
 - Toast-style status banner with auto-dismiss
 - Secure credential storage via expo-secure-store
 - System dark mode via `useColorScheme`
+- App icon badge with unread count (iOS) + unread counter in the header
+- Configurable auto-refresh: every minute / 5 minutes (default) / 15 minutes / hourly / manual
+- Refreshes on app start (and when returning to the foreground), not while backgrounded
+- iOS background fetch keeps the cache and badge fresh while the app is closed (best effort)
 
 ---
 
