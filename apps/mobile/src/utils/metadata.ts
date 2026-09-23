@@ -1,5 +1,10 @@
 const FETCH_TIMEOUT_MS = 5000;
 const MAX_FAVICON_SIZE = 200_000;
+const HTML_HEADERS = {
+  Accept: "text/html,application/xhtml+xml",
+  "User-Agent":
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
+};
 
 export interface PageMetadata {
   title?: string;
@@ -11,45 +16,77 @@ export async function fetchPageMetadata(url: string): Promise<PageMetadata> {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-    let response: Response;
     try {
-      response = await fetch(url, {
-        signal: controller.signal,
-        headers: {
-          Accept: "text/html,application/xhtml+xml",
-          "User-Agent":
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
-        },
-      });
+      const { response, finalUrl } = await fetchFollowingRedirects(
+        url,
+        controller.signal,
+        HTML_HEADERS
+      );
+      if (!response.ok) return {};
+      const html = await response.text();
+      const { title, faviconUrl } = parseMetadata(html, finalUrl);
+      const faviconData = faviconUrl
+        ? await fetchFaviconData(faviconUrl)
+        : undefined;
+      return { title, faviconUrl, faviconData };
     } finally {
       clearTimeout(timer);
     }
-    if (!response.ok) return {};
-    const html = await response.text();
-    const { title, faviconUrl } = parseMetadata(html, url);
-    const faviconData = faviconUrl
-      ? await fetchFaviconData(faviconUrl)
-      : undefined;
-    return { title, faviconUrl, faviconData };
   } catch {
     return {};
   }
+}
+
+/**
+ * Fetches a URL, explicitly following redirects (some React Native fetch
+ * implementations return the 3xx response instead of following it).
+ */
+async function fetchFollowingRedirects(
+  url: string,
+  signal: AbortSignal,
+  headers?: Record<string, string>,
+  maxRedirects = 5
+): Promise<{ response: Response; finalUrl: string }> {
+  let currentUrl = url;
+  for (let i = 0; i < maxRedirects; i++) {
+    const response = await fetch(currentUrl, {
+      signal,
+      headers,
+      redirect: "follow",
+    });
+    if (response.url) currentUrl = response.url;
+
+    if (response.ok) return { response, finalUrl: currentUrl };
+
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+      if (!location) return { response, finalUrl: currentUrl };
+      currentUrl = new URL(location, currentUrl).toString();
+      continue;
+    }
+
+    return { response, finalUrl: currentUrl };
+  }
+  const response = await fetch(currentUrl, { signal, headers });
+  return { response, finalUrl: currentUrl };
 }
 
 async function fetchFaviconData(url: string): Promise<string | undefined> {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-    let response: Response;
     try {
-      response = await fetch(url, { signal: controller.signal });
+      const { response } = await fetchFollowingRedirects(
+        url,
+        controller.signal
+      );
+      if (!response.ok) return undefined;
+      const blob = await response.blob();
+      if (blob.size > MAX_FAVICON_SIZE) return undefined;
+      return await blobToDataUrl(blob);
     } finally {
       clearTimeout(timer);
     }
-    if (!response.ok) return undefined;
-    const blob = await response.blob();
-    if (blob.size > MAX_FAVICON_SIZE) return undefined;
-    return await blobToDataUrl(blob);
   } catch {
     return undefined;
   }
