@@ -59,7 +59,11 @@ interface ReadLaterContextValue {
   testConnection: () => Promise<void>;
   handleToggleRead: (id: string, isRead: boolean) => Promise<void>;
   handleDeleteLink: (id: string) => void;
-  handleAddLink: (url: string, title?: string, fetchTitle?: boolean) => Promise<void>;
+  handleAddLink: (
+    url: string,
+    title?: string,
+    fetchTitle?: boolean
+  ) => Promise<{ ok: boolean; error?: string }>;
   handleMarkAllRead: () => Promise<void>;
   handleDeleteAll: () => Promise<void>;
   handleOpenLink: (url: string) => void;
@@ -344,7 +348,11 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   );
 
   const handleAddLink = useCallback(
-    async (url: string, title?: string, fetchTitle?: boolean) => {
+    async (
+      url: string,
+      title?: string,
+      fetchTitle?: boolean
+    ): Promise<{ ok: boolean; error?: string }> => {
       try {
         const client = getClient(config);
         const savedLink = await client.addLink({
@@ -372,8 +380,12 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
             await doRefreshLinks(config);
           })
           .catch(() => {});
-      } catch (_err) {
-        showStatus("Failed to save link.", "error");
+        return { ok: true };
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Failed to save link.";
+        showStatus(message, "error");
+        return { ok: false, error: message };
       }
     },
     [config, doRefreshLinks, showStatus]

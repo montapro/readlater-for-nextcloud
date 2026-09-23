@@ -21,6 +21,7 @@ export function AddLinkModal() {
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [isFetching, setIsFetching] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const handleFetch = async () => {
     const trimmedUrl = url.trim();
@@ -39,15 +40,24 @@ export function AddLinkModal() {
   const handleSave = async () => {
     const trimmedUrl = url.trim();
     if (!trimmedUrl) return;
-    await handleAddLink(trimmedUrl, title.trim() || undefined);
-    setUrl("");
-    setTitle("");
+    setSaveError("");
+    const result = await handleAddLink(
+      trimmedUrl,
+      title.trim() || undefined
+    );
+    if (result.ok) {
+      setUrl("");
+      setTitle("");
+    } else {
+      setSaveError(result.error || "Failed to save link.");
+    }
   };
 
   const handleClose = () => {
     setShowAddModal(false);
     setUrl("");
     setTitle("");
+    setSaveError("");
   };
 
   return (
@@ -90,8 +100,16 @@ export function AddLinkModal() {
             keyboardType="url"
             autoFocus
             value={url}
-            onChangeText={setUrl}
+            onChangeText={(t) => {
+              setUrl(t);
+              setSaveError("");
+            }}
           />
+          {saveError ? (
+            <Text style={[styles.errorHint, { color: colors.destructive }]}>
+              {saveError}
+            </Text>
+          ) : null}
 
           {/* Title input */}
           <Text style={[styles.label, { color: colors.textSecondary }]}>Title</Text>
@@ -191,6 +209,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 14,
     fontSize: 15,
+  },
+  errorHint: {
+    fontSize: 12,
+    fontWeight: "500",
+    marginTop: -4,
   },
   titleRow: {
     flexDirection: "row",
