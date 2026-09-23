@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useReadLater } from "../context/ReadLaterContext";
 import type { FilterType, SortType } from "../types";
 import { useTheme } from "../hooks/useTheme";
+import { RefreshCw } from "lucide-react-native";
 
 const filters: FilterType[] = ["unread", "read", "all"];
 const sortOptions: { value: SortType; label: string }[] = [
@@ -12,7 +13,8 @@ const sortOptions: { value: SortType; label: string }[] = [
 ];
 
 export function FilterBar() {
-  const { filter, setFilter, sortBy, setSortBy } = useReadLater();
+  const { filter, setFilter, sortBy, setSortBy, refreshLinks, loading } =
+    useReadLater();
   const { colors } = useTheme();
 
   return (
@@ -42,6 +44,14 @@ export function FilterBar() {
             </TouchableOpacity>
           ))}
         </View>
+
+        <TouchableOpacity
+          onPress={refreshLinks}
+          disabled={loading}
+          style={styles.syncButton}
+        >
+          <RefreshCw color={colors.textSecondary} size={18} />
+        </TouchableOpacity>
 
         <View style={[styles.sortWrapper, { borderLeftColor: colors.border }]}>
           <TouchableOpacity
@@ -94,5 +104,8 @@ const styles = StyleSheet.create({
   sortText: {
     fontSize: 12,
     fontWeight: "700",
+  },
+  syncButton: {
+    padding: 4,
   },
 });
