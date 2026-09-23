@@ -31,7 +31,8 @@
       "expo-secure-store",
       "expo-task-manager",
       "expo-background-task",
-      "./plugins/withRemoveApsEntitlement"
+      "./plugins/withRemoveApsEntitlement",
+      "./plugins/withDisableUserScriptSandboxing"
     ]
   }
 }
