@@ -12,6 +12,9 @@ out
 ios/
 android/
 
+# Expo local state
+.expo/
+
 # OS files
 .DS_Store
 Thumbs.db
