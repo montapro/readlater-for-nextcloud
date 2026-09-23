@@ -73,6 +73,9 @@ interface ReadLaterContextValue {
   handleMarkAllRead: () => Promise<void>;
   handleDeleteAll: () => Promise<void>;
   handleOpenLink: (url: string) => void;
+  getIconSource: (
+    link: Link
+  ) => { uri: string; headers: Record<string, string> } | undefined;
 }
 
 const ReadLaterContext = createContext<ReadLaterContextValue | null>(null);
@@ -91,6 +94,15 @@ export function useReadLater(): ReadLaterContextValue {
 
 function getClient(config: WebDAVConfig): ReadLaterClient {
   return new ReadLaterClient(config);
+}
+
+function toBase64(value: string): string {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
 }
 
 /**
@@ -342,7 +354,11 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
           onPress: async () => {
             try {
               const client = getClient(config);
+              const link = links.find((l) => l.id === id);
               await client.deleteLink(id);
+              if (link?.faviconPath) {
+                client.deleteIcon(link.faviconPath).catch(() => {});
+              }
               await doRefreshLinks(config);
             } catch (_err) {
               showStatus("Failed to delete link.", "error");
@@ -351,7 +367,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
         },
       ]);
     },
-    [config, doRefreshLinks, showStatus]
+    [config, links, doRefreshLinks, showStatus]
   );
 
   const handleAddLink = useCallback(
@@ -383,7 +399,13 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
               updates.faviconUrl = meta.faviconUrl;
             }
             if (meta.faviconData) {
-              updates.faviconData = meta.faviconData;
+              const iconPath = await client.saveIcon(
+                savedLink.id,
+                meta.faviconData
+              );
+              if (iconPath) {
+                updates.faviconPath = iconPath;
+              }
             }
             if (Object.keys(updates).length === 0) return;
             await client.updateLink(savedLink.id, updates);
@@ -437,7 +459,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
         },
       },
     ]);
-  }, [config, doRefreshLinks, showStatus]);
+  }, [config, links, doRefreshLinks, showStatus]);
 
   const handleDeleteAll = useCallback(async () => {
     Alert.alert(
@@ -451,6 +473,11 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
           onPress: async () => {
             try {
               const client = getClient(config);
+              for (const link of links) {
+                if (link.faviconPath) {
+                  client.deleteIcon(link.faviconPath).catch(() => {});
+                }
+              }
               await client.deleteAllLinks();
               showStatus("All links deleted.", "info");
               await doRefreshLinks(config);
@@ -461,11 +488,24 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
         },
       ]
     );
-  }, [config, doRefreshLinks, showStatus]);
+  }, [config, links, doRefreshLinks, showStatus]);
 
   const handleOpenLink = useCallback((url: string) => {
     Linking.openURL(url);
   }, []);
+
+  const getIconSource = useCallback(
+    (
+      link: Link
+    ): { uri: string; headers: Record<string, string> } | undefined => {
+      if (!link.faviconPath) return undefined;
+      const base = config.url.endsWith("/") ? config.url : config.url + "/";
+      const uri = base + link.faviconPath;
+      const auth = "Basic " + toBase64(`${config.username || ""}:${config.password || ""}`);
+      return { uri, headers: { Authorization: auth } };
+    },
+    [config]
+  );
 
   // -----------------------------------------------------------------------
   // Badge, auto-refresh and background sync
@@ -589,6 +629,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       handleMarkAllRead,
       handleDeleteAll,
       handleOpenLink,
+      getIconSource,
     }),
     [
       config,
@@ -619,6 +660,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       handleMarkAllRead,
       handleDeleteAll,
       handleOpenLink,
+      getIconSource,
     ]
   );
 

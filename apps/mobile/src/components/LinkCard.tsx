@@ -17,12 +17,20 @@ export function LinkCard({ link }: Props) {
     handleDeleteLink,
     setEditingLink,
     setShowAddModal,
+    getIconSource,
   } = useReadLater();
   const { colors } = useTheme();
   const [faviconFailed, setFaviconFailed] = useState(false);
 
-  const faviconSource = link.faviconData || link.faviconUrl;
-  const showFavicon = !!faviconSource && !faviconFailed;
+  const iconSource = getIconSource(link);
+  let imageSource: { uri: string; headers?: Record<string, string> } | null =
+    null;
+  if (iconSource) {
+    imageSource = { uri: iconSource.uri, headers: iconSource.headers };
+  } else if (link.faviconData) {
+    imageSource = { uri: link.faviconData };
+  }
+  const showFavicon = imageSource !== null && !faviconFailed;
 
   return (
     <View
@@ -37,9 +45,9 @@ export function LinkCard({ link }: Props) {
     >
       <View style={styles.cardHeader}>
         <View style={[styles.cardIcon, { backgroundColor: colors.iconBg }]}>
-          {showFavicon ? (
+          {showFavicon && imageSource ? (
             <Image
-              source={{ uri: faviconSource }}
+              source={imageSource}
               style={styles.favicon}
               onError={() => setFaviconFailed(true)}
             />

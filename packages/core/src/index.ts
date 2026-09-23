@@ -13,6 +13,7 @@ export const LinkSchema = z.object({
   isRead: z.boolean().default(false),
   faviconUrl: z.string().optional(),
   faviconData: z.string().optional(),
+  faviconPath: z.string().optional(),
 });
 
 export type Link = z.infer<typeof LinkSchema>;
@@ -40,10 +41,13 @@ interface FetchResult {
 
 export class ReadLaterClient {
   private client: WebDAVClient;
+  private readonly config: WebDAVConfig;
   private readonly storagePath = "/ReadLater";
+  private readonly iconsPath = "/ReadLater/icons";
   private readonly fileName = "links.json";
 
   constructor(config: WebDAVConfig) {
+    this.config = config;
     const options: {
       headers: Record<string, string>;
       authType?: AuthType;
@@ -301,4 +305,68 @@ export class ReadLaterClient {
       store.links = [];
     });
   }
+
+  /**
+   * Uploads a favicon image (as a base64 data URI) to /ReadLater/icons/[id]
+   * and returns the WebDAV-relative path (e.g. "ReadLater/icons/<id>.png").
+   */
+  async saveIcon(id: string, dataUri: string): Promise<string | undefined> {
+    try {
+      const comma = dataUri.indexOf(",");
+      if (comma === -1) return undefined;
+      const mime = dataUri.match(/^data:([^;,]+)/)?.[1] || "image/png";
+      const base64 = dataUri.slice(comma + 1);
+      const ext = mimeToExtension(mime);
+      const bytes = base64ToBytes(base64);
+
+      if (!(await this.client.exists(this.iconsPath))) {
+        await this.client.createDirectory(this.iconsPath, { recursive: true });
+      }
+
+      const davPath = `${this.iconsPath}/${id}.${ext}`;
+      await this.client.putFileContents(davPath, bytes.buffer as ArrayBuffer);
+      return davPath.replace(/^\//, "");
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * Deletes a previously stored favicon file.
+   * @param faviconPath WebDAV-relative path returned by saveIcon.
+   */
+  async deleteIcon(faviconPath: string): Promise<void> {
+    try {
+      await this.client.deleteFile(`/${faviconPath}`);
+    } catch {
+      // Ignore missing files / network errors
+    }
+  }
+}
+
+const BASE64_CHARS =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+function mimeToExtension(mime: string): string {
+  if (mime.includes("svg")) return "svg";
+  if (mime.includes("icon")) return "ico";
+  return "png";
+}
+
+function base64ToBytes(base64: string): Uint8Array {
+  const out: number[] = [];
+  let buffer = 0;
+  let bits = 0;
+  for (const ch of base64) {
+    if (ch === "=") break;
+    const value = BASE64_CHARS.indexOf(ch);
+    if (value === -1) continue;
+    buffer = (buffer << 6) | value;
+    bits += 6;
+    if (bits >= 8) {
+      bits -= 8;
+      out.push((buffer >> bits) & 0xff);
+    }
+  }
+  return new Uint8Array(out);
 }
