@@ -23,6 +23,7 @@ import {
   registerBackgroundSyncAsync,
   unregisterBackgroundSyncAsync,
 } from "../backgroundTask";
+import { useShareIntent } from "expo-share-intent";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -108,6 +109,9 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     visible: false,
   });
   const [showAddModal, setShowAddModal] = useState(false);
+
+  const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntent();
+  const shareIntentHandledRef = useRef(false);
 
   const updateConfig = useCallback((partial: Partial<WebDAVConfig>) => {
     setConfig((prev) => ({ ...prev, ...partial }));
@@ -438,6 +442,24 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       registerBackgroundSyncAsync(minutes);
     }
   }, [isConfigured, refreshInterval]);
+
+  // Save a URL shared from another app (iOS share extension)
+  useEffect(() => {
+    if (!hasShareIntent || !isConfigured || shareIntentHandledRef.current) {
+      return;
+    }
+    const url = shareIntent.webUrl;
+    if (!url) return;
+    shareIntentHandledRef.current = true;
+    resetShareIntent();
+    handleAddLink(url, shareIntent.meta?.title);
+  }, [
+    hasShareIntent,
+    shareIntent,
+    isConfigured,
+    resetShareIntent,
+    handleAddLink,
+  ]);
 
   // -----------------------------------------------------------------------
   // Context value

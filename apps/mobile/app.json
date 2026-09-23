@@ -3,6 +3,7 @@
     "name": "ReadLater",
     "slug": "readlater-mobile",
     "version": "1.0.0",
+    "scheme": "readlater",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -31,6 +32,7 @@
       "expo-secure-store",
       "expo-task-manager",
       "expo-background-task",
+      "expo-share-intent",
       "./plugins/withRemoveApsEntitlement",
       "./plugins/withDisableUserScriptSandboxing"
     ]
