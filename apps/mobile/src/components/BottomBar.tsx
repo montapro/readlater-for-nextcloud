@@ -2,23 +2,52 @@ import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useReadLater } from "../context/ReadLaterContext";
 import { useTheme } from "../hooks/useTheme";
-import { RefreshCw } from "lucide-react-native";
+import { Home, RefreshCw, Settings } from "lucide-react-native";
 
 export function BottomBar() {
-  const { refreshLinks, loading } = useReadLater();
+  const { showSettings, setShowSettings, refreshLinks, loading, unreadCount } =
+    useReadLater();
   const { colors } = useTheme();
 
+  const activeColor = (active: boolean) =>
+    active ? colors.primary : colors.textMuted;
+
   return (
-    <View style={[styles.bottomBar, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
+    <View
+      style={[
+        styles.bottomBar,
+        { backgroundColor: colors.card, borderTopColor: colors.border },
+      ]}
+    >
       <TouchableOpacity
-        style={[styles.refreshButton, { backgroundColor: colors.buttonBg }]}
+        style={styles.tabButton}
+        onPress={() => setShowSettings(false)}
+      >
+        <View>
+          <Home color={activeColor(!showSettings)} size={24} />
+          {unreadCount > 0 && (
+            <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+              <Text style={styles.badgeText}>
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </Text>
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.tabButton}
         onPress={refreshLinks}
         disabled={loading}
       >
-        <RefreshCw color={colors.primary} size={20} style={loading ? { transform: [{ rotate: "45deg" }] } : undefined} />
-        <Text style={[styles.refreshText, { color: colors.primary }]}>
-          {loading ? "Syncing..." : "Sync Now"}
-        </Text>
+        <RefreshCw color={colors.textSecondary} size={24} />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.tabButton}
+        onPress={() => setShowSettings(true)}
+      >
+        <Settings color={activeColor(showSettings)} size={24} />
       </TouchableOpacity>
     </View>
   );
@@ -26,18 +55,29 @@ export function BottomBar() {
 
 const styles = StyleSheet.create({
   bottomBar: {
-    padding: 15,
+    flexDirection: "row",
     borderTopWidth: 1,
   },
-  refreshButton: {
-    flexDirection: "row",
+  tabButton: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    padding: 12,
-    borderRadius: 10,
+    paddingVertical: 14,
   },
-  refreshText: {
+  badge: {
+    position: "absolute",
+    top: -6,
+    right: -10,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 10,
     fontWeight: "700",
   },
 });

@@ -7,7 +7,6 @@ import {
   useReadLater,
 } from "./src/context/ReadLaterContext";
 import { useTheme } from "./src/hooks/useTheme";
-import { Header } from "./src/components/Header";
 import { SettingsPanel } from "./src/components/SettingsPanel";
 import { LinkList } from "./src/components/LinkList";
 import { BottomBar } from "./src/components/BottomBar";
@@ -23,15 +22,13 @@ function AppContent() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style={isDark ? "light" : "dark"} />
 
-      <Header />
-
       <StatusBanner />
 
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         {showSettings ? <SettingsPanel /> : <LinkList />}
       </View>
 
-      {!showSettings && <BottomBar />}
+      <BottomBar />
 
       <AddLinkModal />
     </SafeAreaView>
