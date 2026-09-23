@@ -123,8 +123,8 @@ importers:
         specifier: ~58.0.1
         version: 58.0.1(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
       expo-task-manager:
-        specifier: ~58.0.6
-        version: 58.0.6(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))
+        specifier: ~58.0.7
+        version: 58.0.7(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))
       lucide-react-native:
         specifier: ^1.47.0
         version: 1.47.0(react-native-svg@15.15.5(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
@@ -2231,12 +2231,6 @@ packages:
     peerDependencies:
       expo: '*'
       react: '*'
-      react-native: '*'
-
-  expo-task-manager@58.0.6:
-    resolution: {integrity: sha512-gEyar5eiOYUxhAGbkcH8foECPxHm0AJtVMxi5Pnn9BP94YBcr8MtddyYUih7SCswfK6VVXIOXD9t9zAtnJah/w==}
-    peerDependencies:
-      expo: '*'
       react-native: '*'
 
   expo-task-manager@58.0.7:
@@ -5965,12 +5959,6 @@ snapshots:
       expo: 58.0.0-preview.5(@babel/core@7.29.7)(@expo/dom-webview@58.0.1)(react-dom@19.2.7(react@19.3.0))(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
       react: 19.3.0
       react-native: 0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0)
-
-  expo-task-manager@58.0.6(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0)):
-    dependencies:
-      expo: 58.0.0-preview.5(@babel/core@7.29.7)(@expo/dom-webview@58.0.1)(react-dom@19.2.7(react@19.3.0))(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
-      react-native: 0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0)
-      unimodules-app-loader: 58.0.0
 
   expo-task-manager@58.0.7(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0)):
     dependencies:
