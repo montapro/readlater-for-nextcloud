@@ -381,11 +381,9 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
           })
           .catch(() => {});
         return { ok: true };
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to save link.";
-        showStatus(message, "error");
-        return { ok: false, error: message };
+      } catch (_err) {
+        showStatus("Invalid URL", "error");
+        return { ok: false, error: "Invalid URL" };
       }
     },
     [config, doRefreshLinks, showStatus]
