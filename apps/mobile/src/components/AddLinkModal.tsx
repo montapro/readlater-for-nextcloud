@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -16,12 +16,34 @@ import { Save, X, CloudDownload } from "lucide-react-native";
 import { fetchPageMetadata } from "../utils/metadata";
 
 export function AddLinkModal() {
-  const { showAddModal, setShowAddModal, handleAddLink } = useReadLater();
+  const {
+    showAddModal,
+    setShowAddModal,
+    handleAddLink,
+    editingLink,
+    setEditingLink,
+    handleUpdateLink,
+  } = useReadLater();
   const { colors } = useTheme();
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [isFetching, setIsFetching] = useState(false);
   const [saveError, setSaveError] = useState("");
+
+  const isEditing = editingLink !== null;
+
+  // Pre-fill the form when opening for editing, reset otherwise
+  useEffect(() => {
+    if (editingLink) {
+      setUrl(editingLink.url);
+      setTitle(editingLink.title);
+    } else {
+      setUrl("");
+      setTitle("");
+    }
+    setSaveError("");
+    setIsFetching(false);
+  }, [editingLink, showAddModal]);
 
   const handleFetch = async () => {
     const trimmedUrl = url.trim();
@@ -41,13 +63,16 @@ export function AddLinkModal() {
     const trimmedUrl = url.trim();
     if (!trimmedUrl) return;
     setSaveError("");
-    const result = await handleAddLink(
-      trimmedUrl,
-      title.trim() || undefined
-    );
+    const result = editingLink
+      ? await handleUpdateLink(editingLink.id, {
+          url: trimmedUrl,
+          title: title.trim() || trimmedUrl,
+        })
+      : await handleAddLink(trimmedUrl, title.trim() || undefined);
     if (result.ok) {
       setUrl("");
       setTitle("");
+      setEditingLink(null);
     } else {
       setSaveError("Invalid URL");
     }
@@ -58,6 +83,7 @@ export function AddLinkModal() {
     setUrl("");
     setTitle("");
     setSaveError("");
+    setEditingLink(null);
   };
 
   return (
@@ -75,7 +101,7 @@ export function AddLinkModal() {
           {/* Header */}
           <View style={styles.dialogHeader}>
             <Text style={[styles.dialogTitle, { color: colors.text }]}>
-              Save a Link
+              {isEditing ? "Edit Link" : "Save a Link"}
             </Text>
             <TouchableOpacity onPress={handleClose}>
               <X color={colors.textSecondary} size={22} />
@@ -98,7 +124,7 @@ export function AddLinkModal() {
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="url"
-            autoFocus
+            autoFocus={!isEditing}
             value={url}
             onChangeText={(t) => {
               setUrl(t);
@@ -168,7 +194,9 @@ export function AddLinkModal() {
               disabled={!url.trim()}
             >
               <Save color="#fff" size={18} />
-              <Text style={styles.saveText}>Save Link</Text>
+              <Text style={styles.saveText}>
+                {isEditing ? "Update Link" : "Save Link"}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

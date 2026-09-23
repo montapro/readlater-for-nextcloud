@@ -3,7 +3,7 @@ import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
 import { Link as LinkType } from "@readlater/core";
 import { useReadLater } from "../context/ReadLaterContext";
 import { useTheme } from "../hooks/useTheme";
-import { Link2, ExternalLink, CheckCircle, Trash2 } from "lucide-react-native";
+import { Link2, ExternalLink, CheckCircle, Trash2, Pencil } from "lucide-react-native";
 import { formatDate } from "../utils";
 
 interface Props {
@@ -11,7 +11,8 @@ interface Props {
 }
 
 export function LinkCard({ link }: Props) {
-  const { handleOpenLink, handleToggleRead, handleDeleteLink } = useReadLater();
+  const { handleOpenLink, handleToggleRead, handleDeleteLink, setEditingLink } =
+    useReadLater();
   const { colors } = useTheme();
   const [faviconFailed, setFaviconFailed] = useState(false);
 
@@ -75,19 +76,18 @@ export function LinkCard({ link }: Props) {
       <View style={[styles.cardActions, { backgroundColor: colors.cardActionsBg, borderTopColor: colors.border }]}>
         <TouchableOpacity style={[styles.actionButton, { borderRightColor: colors.border }]} onPress={() => handleDeleteLink(link.id)}>
           <Trash2 color={colors.destructive} size={18} />
-          <Text style={[styles.actionText, { color: colors.destructive }]}>Delete</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.actionButton, { borderRightColor: colors.border }]} onPress={() => setEditingLink(link)}>
+          <Pencil color={colors.textSecondary} size={18} />
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.actionButton, { borderRightColor: colors.border }]} onPress={() => handleToggleRead(link.id, link.isRead)}>
           <CheckCircle color={link.isRead ? colors.success : colors.textSecondary} size={18} />
-          <Text style={[styles.actionText, link.isRead && { color: colors.success }, !link.isRead && { color: colors.textSecondary }]}>
-            {link.isRead ? "Done" : "Read"}
-          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.actionButton, { borderRightWidth: 0 }]} onPress={() => handleOpenLink(link.url)}>
           <ExternalLink color={colors.textSecondary} size={18} />
-          <Text style={[styles.actionText, { color: colors.textSecondary }]}>Open</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -163,9 +163,5 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 6,
     borderRightWidth: 1,
-  },
-  actionText: {
-    fontSize: 12,
-    fontWeight: "600",
   },
 });

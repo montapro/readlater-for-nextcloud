@@ -54,11 +54,17 @@ interface ReadLaterContextValue {
   clearStatus: () => void;
   showAddModal: boolean;
   setShowAddModal: (show: boolean) => void;
+  editingLink: Link | null;
+  setEditingLink: (link: Link | null) => void;
   refreshLinks: () => Promise<void>;
   saveSettings: () => Promise<void>;
   testConnection: () => Promise<void>;
   handleToggleRead: (id: string, isRead: boolean) => Promise<void>;
   handleDeleteLink: (id: string) => void;
+  handleUpdateLink: (
+    id: string,
+    updates: Partial<Omit<Link, "id" | "addedAt">>
+  ) => Promise<{ ok: boolean; error?: string }>;
   handleAddLink: (
     url: string,
     title?: string,
@@ -135,6 +141,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     visible: false,
   });
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingLink, setEditingLink] = useState<Link | null>(null);
 
   const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntent();
   const shareIntentHandledRef = useRef(false);
@@ -389,6 +396,27 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     [config, doRefreshLinks, showStatus]
   );
 
+  const handleUpdateLink = useCallback(
+    async (
+      id: string,
+      updates: Partial<Omit<Link, "id" | "addedAt">>
+    ): Promise<{ ok: boolean; error?: string }> => {
+      try {
+        const client = getClient(config);
+        await client.updateLink(id, updates);
+        setShowAddModal(false);
+        setEditingLink(null);
+        showStatus("Link updated!", "success");
+        await doRefreshLinks(config);
+        return { ok: true };
+      } catch (_err) {
+        showStatus("Invalid URL", "error");
+        return { ok: false, error: "Invalid URL" };
+      }
+    },
+    [config, doRefreshLinks, showStatus]
+  );
+
   const handleMarkAllRead = useCallback(async () => {
     Alert.alert("Mark all as read", "Mark all links as read?", [
       { text: "Cancel", style: "cancel" },
@@ -546,11 +574,14 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       clearStatus,
       showAddModal,
       setShowAddModal,
+      editingLink,
+      setEditingLink,
       refreshLinks,
       saveSettings,
       testConnection,
       handleToggleRead,
       handleDeleteLink,
+      handleUpdateLink,
       handleAddLink,
       handleMarkAllRead,
       handleDeleteAll,
@@ -574,11 +605,13 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       showStatus,
       clearStatus,
       showAddModal,
+      editingLink,
       refreshLinks,
       saveSettings,
       testConnection,
       handleToggleRead,
       handleDeleteLink,
+      handleUpdateLink,
       handleAddLink,
       handleMarkAllRead,
       handleDeleteAll,
