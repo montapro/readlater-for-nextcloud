@@ -2,11 +2,17 @@ import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useReadLater } from "../context/ReadLaterContext";
 import { useTheme } from "../hooks/useTheme";
-import { Home, RefreshCw, Settings } from "lucide-react-native";
+import { Home, Plus, RefreshCw, Settings } from "lucide-react-native";
 
 export function BottomBar() {
-  const { showSettings, setShowSettings, refreshLinks, loading, unreadCount } =
-    useReadLater();
+  const {
+    showSettings,
+    setShowSettings,
+    refreshLinks,
+    loading,
+    unreadCount,
+    setShowAddModal,
+  } = useReadLater();
   const { colors } = useTheme();
 
   const activeColor = (active: boolean) =>
@@ -35,6 +41,15 @@ export function BottomBar() {
               </Text>
             </View>
           )}
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.tabButton}
+        onPress={() => setShowAddModal(true)}
+      >
+        <View style={[styles.addCircle, { backgroundColor: colors.primary }]}>
+          <Plus color="#fff" size={22} />
         </View>
       </TouchableOpacity>
 
@@ -73,6 +88,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 10,
     borderRadius: 10,
+  },
+  addCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
   },
   badge: {
     position: "absolute",

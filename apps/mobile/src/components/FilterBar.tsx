@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useReadLater } from "../context/ReadLaterContext";
 import type { FilterType, SortType } from "../types";
 import { useTheme } from "../hooks/useTheme";
-import { Plus } from "lucide-react-native";
 
 const filters: FilterType[] = ["unread", "read", "all"];
 const sortOptions: { value: SortType; label: string }[] = [
@@ -13,21 +12,11 @@ const sortOptions: { value: SortType; label: string }[] = [
 ];
 
 export function FilterBar() {
-  const { filter, setFilter, sortBy, setSortBy, setShowAddModal } = useReadLater();
+  const { filter, setFilter, sortBy, setSortBy } = useReadLater();
   const { colors } = useTheme();
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-      {/* First row: Add button */}
-      <TouchableOpacity
-        style={[styles.addButton, { backgroundColor: colors.buttonBg }]}
-        onPress={() => setShowAddModal(true)}
-      >
-        <Plus color={colors.primary} size={18} />
-        <Text style={[styles.addText, { color: colors.primary }]}>Add Link</Text>
-      </TouchableOpacity>
-
-      {/* Second row: Filter buttons + Sort */}
       <View style={styles.row}>
         <View style={styles.filterRow}>
           {filters.map((f) => (
@@ -76,19 +65,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    gap: 8,
-  },
-  addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  addText: {
-    fontWeight: "700",
-    fontSize: 14,
   },
   row: {
     flexDirection: "row",
