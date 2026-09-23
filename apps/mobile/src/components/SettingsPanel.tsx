@@ -48,6 +48,7 @@ export function SettingsPanel() {
         placeholderTextColor={colors.textMuted}
         autoCapitalize="none"
         autoCorrect={false}
+        keyboardType="url"
         value={config.url}
         onChangeText={(t) => updateConfig({ url: t })}
       />

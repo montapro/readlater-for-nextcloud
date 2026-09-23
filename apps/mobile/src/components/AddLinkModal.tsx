@@ -69,6 +69,8 @@ export function AddLinkModal() {
             placeholder="https://example.com/article"
             placeholderTextColor={colors.textMuted}
             autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
             autoFocus
             value={url}
             onChangeText={setUrl}
