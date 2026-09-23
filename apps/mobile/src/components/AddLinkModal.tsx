@@ -49,7 +49,7 @@ export function AddLinkModal() {
       setUrl("");
       setTitle("");
     } else {
-      setSaveError(result.error || "Failed to save link.");
+      setSaveError("Invalid URL");
     }
   };
 
