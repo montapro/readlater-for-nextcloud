@@ -29,9 +29,9 @@
     },
     "plugins": [
       "expo-secure-store",
-      "expo-notifications",
       "expo-background-fetch",
-      "expo-task-manager"
+      "expo-task-manager",
+      "./plugins/withRemoveApsEntitlement"
     ]
   }
 }
