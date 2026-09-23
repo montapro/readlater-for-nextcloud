@@ -94,12 +94,11 @@ function extractSharedTitle(
   const title = text
     .replace(url ?? "", "")
     .replace(/https?:\/\/\S+/g, " ")
-    .replace(/^watch\s*/i, "")
-    .replace(/\s*on youtube\s*$/i, "")
-    .replace(/["“”'‘’]/g, "")
     .replace(/[\r\n]+/g, " ")
-    .replace(/[\s\-–—:]+$/g, "")
-    .replace(/^[\s\-–—:]+/g, "")
+    .replace(/watch\s*["'“”]?\s*/i, "")
+    .replace(/\s*["'””]?\s*on youtube\s*/i, " ")
+    .replace(/["“”'‘’]/g, "")
+    .replace(/[\s\-–—:]+/g, " ")
     .trim();
   return title || undefined;
 }
@@ -467,7 +466,12 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
 
   // Save a URL shared from another app (iOS share extension)
   useEffect(() => {
-    if (!hasShareIntent || !isConfigured || shareIntentHandledRef.current) {
+    if (!hasShareIntent) {
+      // Allow processing the next share intent
+      shareIntentHandledRef.current = false;
+      return;
+    }
+    if (!isConfigured || shareIntentHandledRef.current) {
       return;
     }
     const url = shareIntent.webUrl;
