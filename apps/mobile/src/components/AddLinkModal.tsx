@@ -51,7 +51,7 @@ export function AddLinkModal() {
     setIsFetching(true);
     try {
       const meta = await fetchPageMetadata(trimmedUrl);
-      if (meta.title && !title.trim()) {
+      if (meta.title) {
         setTitle(meta.title);
       }
     } finally {
@@ -163,11 +163,11 @@ export function AddLinkModal() {
                 {
                   backgroundColor: colors.inputBg,
                   borderColor: colors.inputBorder,
-                  opacity: url.trim() && !title.trim() && !isFetching ? 1 : 0.4,
+                  opacity: url.trim() && !isFetching ? 1 : 0.4,
                 },
               ]}
               onPress={handleFetch}
-              disabled={!url.trim() || !!title.trim() || isFetching}
+              disabled={!url.trim() || isFetching}
             >
               {isFetching ? (
                 <ActivityIndicator size="small" color={colors.primary} />
