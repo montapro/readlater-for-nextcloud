@@ -13,7 +13,7 @@ import * as SecureStore from "expo-secure-store";
 import * as Linking from "expo-linking";
 import * as Notifications from "expo-notifications";
 import { ReadLaterClient, WebDAVConfig, Link } from "@readlater/core";
-import type { FilterType, SortType, StatusMessage, RefreshInterval } from "../types";
+import type { FilterType, SortType, StatusMessage, RefreshInterval, ThemeType } from "../types";
 import {
   DEFAULT_REFRESH_INTERVAL,
   intervalToMs,
@@ -44,6 +44,8 @@ interface ReadLaterContextValue {
   setSortBy: (s: SortType) => void;
   refreshInterval: RefreshInterval;
   setRefreshInterval: (interval: RefreshInterval) => void;
+  theme: ThemeType;
+  setTheme: (theme: ThemeType) => void;
   unreadCount: number;
   status: StatusMessage;
   showStatus: (message: string, type: StatusMessage["type"]) => void;
@@ -99,6 +101,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   const [refreshInterval, setRefreshInterval] = useState<RefreshInterval>(
     DEFAULT_REFRESH_INTERVAL
   );
+  const [theme, setTheme] = useState<ThemeType>("system");
   const [status, setStatus] = useState<StatusMessage>({
     text: "",
     type: "info",
@@ -143,7 +146,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const [url, user, pass, savedFilter, savedSortBy, savedInterval, linksCache] =
+        const [url, user, pass, savedFilter, savedSortBy, savedInterval, savedTheme, linksCache] =
           await Promise.all([
             SecureStore.getItemAsync("webdav_url"),
             SecureStore.getItemAsync("webdav_user"),
@@ -151,12 +154,14 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
             SecureStore.getItemAsync("pref_filter"),
             SecureStore.getItemAsync("pref_sortBy"),
             SecureStore.getItemAsync("pref_refreshInterval"),
+            SecureStore.getItemAsync("pref_theme"),
             SecureStore.getItemAsync("links_cache"),
           ]);
 
         if (savedFilter) setFilter(savedFilter as FilterType);
         if (savedSortBy) setSortBy(savedSortBy as SortType);
         if (savedInterval) setRefreshInterval(savedInterval as RefreshInterval);
+        if (savedTheme) setTheme(savedTheme as ThemeType);
 
         // Restore cached links for immediate display
         if (linksCache) {
@@ -211,6 +216,10 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       () => {}
     );
   }, [refreshInterval]);
+
+  useEffect(() => {
+    SecureStore.setItemAsync("pref_theme", theme).catch(() => {});
+  }, [theme]);
 
   // -----------------------------------------------------------------------
   // Actions
@@ -451,6 +460,8 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       setSortBy,
       refreshInterval,
       setRefreshInterval,
+      theme,
+      setTheme,
       unreadCount,
       status,
       showStatus,
@@ -479,6 +490,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       filter,
       sortBy,
       refreshInterval,
+      theme,
       unreadCount,
       status,
       showStatus,

@@ -1,4 +1,5 @@
 import { useColorScheme } from "react-native";
+import { useReadLater } from "../context/ReadLaterContext";
 
 export interface AppColors {
   background: string;
@@ -64,7 +65,8 @@ const dark: AppColors = {
 };
 
 export function useTheme() {
+  const { theme } = useReadLater();
   const scheme = useColorScheme();
-  const isDark = scheme === "dark";
+  const isDark = theme === "dark" || (theme === "system" && scheme === "dark");
   return { isDark, colors: isDark ? dark : light };
 }

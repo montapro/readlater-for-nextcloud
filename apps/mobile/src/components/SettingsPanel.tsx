@@ -9,7 +9,14 @@ import {
 import { useReadLater } from "../context/ReadLaterContext";
 import { useTheme } from "../hooks/useTheme";
 import { REFRESH_INTERVAL_OPTIONS } from "../refreshIntervals";
+import type { ThemeType } from "../types";
 import { Save, Wifi } from "lucide-react-native";
+
+const THEME_OPTIONS: { value: ThemeType; label: string }[] = [
+  { value: "system", label: "System" },
+  { value: "dark", label: "Dark" },
+  { value: "light", label: "Light" },
+];
 
 export function SettingsPanel() {
   const {
@@ -21,6 +28,8 @@ export function SettingsPanel() {
     isUrlValid,
     refreshInterval,
     setRefreshInterval,
+    theme,
+    setTheme,
   } = useReadLater();
   const { colors } = useTheme();
   const hasUrl = config.url.trim().length > 0;
@@ -162,6 +171,39 @@ export function SettingsPanel() {
           background, iOS controls the timing (best effort, at least every 15
           minutes).
         </Text>
+      </View>
+
+      <View style={[styles.refreshSection, { borderTopColor: colors.border }]}>
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+          Appearance
+        </Text>
+        <View style={styles.refreshOptions}>
+          {THEME_OPTIONS.map((option) => {
+            const active = theme === option.value;
+            return (
+              <TouchableOpacity
+                key={option.value}
+                onPress={() => setTheme(option.value)}
+                style={[
+                  styles.refreshChip,
+                  {
+                    backgroundColor: active ? colors.primary : colors.inputBg,
+                    borderColor: active ? colors.primary : colors.inputBorder,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.refreshChipText,
+                    { color: active ? "#fff" : colors.textSecondary },
+                  ]}
+                >
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
     </View>
   );
