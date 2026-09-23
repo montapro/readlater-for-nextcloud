@@ -32,7 +32,16 @@
       "expo-secure-store",
       "expo-task-manager",
       "expo-background-task",
-      "expo-share-intent",
+      [
+        "expo-share-intent",
+        {
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsWebURLWithMaxCount": 1,
+            "NSExtensionActivationSupportsWebPageWithMaxCount": 1,
+            "NSExtensionActivationSupportsText": true
+          }
+        }
+      ],
       "./plugins/withRemoveApsEntitlement",
       "./plugins/withDisableUserScriptSandboxing"
     ]
