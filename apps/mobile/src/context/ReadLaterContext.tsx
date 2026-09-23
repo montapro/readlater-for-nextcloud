@@ -82,6 +82,28 @@ function getClient(config: WebDAVConfig): ReadLaterClient {
   return new ReadLaterClient(config);
 }
 
+/**
+ * Derives a title from a shared text payload (e.g. YouTube's
+ * `Watch "Title" on YouTube — https://youtu.be/...`).
+ */
+function extractSharedTitle(
+  text: string | null | undefined,
+  url: string | null
+): string | undefined {
+  if (!text) return undefined;
+  const title = text
+    .replace(url ?? "", "")
+    .replace(/https?:\/\/\S+/g, " ")
+    .replace(/^watch\s*/i, "")
+    .replace(/\s*on youtube\s*$/i, "")
+    .replace(/["“”'‘’]/g, "")
+    .replace(/[\r\n]+/g, " ")
+    .replace(/[\s\-–—:]+$/g, "")
+    .replace(/^[\s\-–—:]+/g, "")
+    .trim();
+  return title || undefined;
+}
+
 // ---------------------------------------------------------------------------
 // Provider
 // ---------------------------------------------------------------------------
@@ -452,7 +474,9 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     if (!url) return;
     shareIntentHandledRef.current = true;
     resetShareIntent();
-    handleAddLink(url, shareIntent.meta?.title);
+    const title =
+      shareIntent.meta?.title ?? extractSharedTitle(shareIntent.text, url);
+    handleAddLink(url, title);
   }, [
     hasShareIntent,
     shareIntent,
