@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import React, { useState } from "react";
+import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
 import { Link as LinkType } from "@readlater/core";
 import { useReadLater } from "../context/ReadLaterContext";
 import { useTheme } from "../hooks/useTheme";
@@ -13,6 +13,9 @@ interface Props {
 export function LinkCard({ link }: Props) {
   const { handleOpenLink, handleToggleRead, handleDeleteLink } = useReadLater();
   const { colors } = useTheme();
+  const [faviconFailed, setFaviconFailed] = useState(false);
+
+  const showFavicon = link.faviconUrl && !faviconFailed;
 
   return (
     <View
@@ -27,7 +30,15 @@ export function LinkCard({ link }: Props) {
     >
       <View style={styles.cardHeader}>
         <View style={[styles.cardIcon, { backgroundColor: colors.iconBg }]}>
-          <Link2 color={link.isRead ? colors.textMuted : colors.primary} size={20} />
+          {showFavicon ? (
+            <Image
+              source={{ uri: link.faviconUrl }}
+              style={styles.favicon}
+              onError={() => setFaviconFailed(true)}
+            />
+          ) : (
+            <Link2 color={link.isRead ? colors.textMuted : colors.primary} size={20} />
+          )}
         </View>
         <View style={styles.cardContent}>
           <Text
@@ -99,6 +110,11 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 8,
     marginTop: 2,
+  },
+  favicon: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
   },
   cardContent: {
     flex: 1,

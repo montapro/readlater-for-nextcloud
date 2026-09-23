@@ -24,6 +24,7 @@ import {
   unregisterBackgroundSyncAsync,
 } from "../backgroundTask";
 import { useShareIntent } from "expo-share-intent";
+import { fetchPageMetadata } from "../utils/metadata";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -58,7 +59,7 @@ interface ReadLaterContextValue {
   testConnection: () => Promise<void>;
   handleToggleRead: (id: string, isRead: boolean) => Promise<void>;
   handleDeleteLink: (id: string) => void;
-  handleAddLink: (url: string, title?: string) => Promise<void>;
+  handleAddLink: (url: string, title?: string, fetchTitle?: boolean) => Promise<void>;
   handleMarkAllRead: () => Promise<void>;
   handleDeleteAll: () => Promise<void>;
   handleOpenLink: (url: string) => void;
@@ -343,10 +344,10 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   );
 
   const handleAddLink = useCallback(
-    async (url: string, title?: string) => {
+    async (url: string, title?: string, fetchTitle?: boolean) => {
       try {
         const client = getClient(config);
-        await client.addLink({
+        const savedLink = await client.addLink({
           url,
           title: title || url,
           tags: [],
@@ -354,6 +355,23 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
         setShowAddModal(false);
         showStatus("Link saved!", "success");
         await doRefreshLinks(config);
+
+        // Fetch page metadata (title + favicon) in the background
+        fetchPageMetadata(url)
+          .then(async (meta) => {
+            const updates: Partial<Link> = {};
+            const shouldUpdateTitle = fetchTitle || savedLink.title === url;
+            if (shouldUpdateTitle && meta.title) {
+              updates.title = meta.title;
+            }
+            if (meta.faviconUrl) {
+              updates.faviconUrl = meta.faviconUrl;
+            }
+            if (Object.keys(updates).length === 0) return;
+            await client.updateLink(savedLink.id, updates);
+            await doRefreshLinks(config);
+          })
+          .catch(() => {});
       } catch (_err) {
         showStatus("Failed to save link.", "error");
       }
@@ -480,7 +498,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     resetShareIntent();
     const title =
       shareIntent.meta?.title ?? extractSharedTitle(shareIntent.text, url);
-    handleAddLink(url, title);
+    handleAddLink(url, title, true);
   }, [
     hasShareIntent,
     shareIntent,
