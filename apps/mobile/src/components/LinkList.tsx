@@ -5,10 +5,16 @@ import { useTheme } from "../hooks/useTheme";
 import { LinkCard } from "./LinkCard";
 import { FilterBar } from "./FilterBar";
 import { CheckCheck, Trash2, Link2 } from "lucide-react-native";
+import * as Haptics from "expo-haptics";
 
 export function LinkList() {
   const { links, filter, sortBy, loading, refreshLinks, handleMarkAllRead, handleDeleteAll } = useReadLater();
   const { colors } = useTheme();
+
+  const handleRefresh = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    return refreshLinks();
+  };
 
   const processedLinks = useMemo(() => {
     let result = [...links];
@@ -44,7 +50,7 @@ export function LinkList() {
         renderItem={({ item }) => <LinkCard link={item} />}
         contentContainerStyle={styles.listContainer}
         refreshing={loading}
-        onRefresh={refreshLinks}
+        onRefresh={handleRefresh}
         ListHeaderComponent={
           processedLinks.length > 0 ? (
             <View style={[styles.listHeader, { borderBottomColor: colors.border }]}>
