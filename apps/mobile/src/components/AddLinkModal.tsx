@@ -124,7 +124,7 @@ export function AddLinkModal() {
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="url"
-            autoFocus={!isEditing}
+            autoFocus
             value={url}
             onChangeText={(t) => {
               setUrl(t);
