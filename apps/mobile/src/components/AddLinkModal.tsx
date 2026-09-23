@@ -15,6 +15,13 @@ import { useTheme } from "../hooks/useTheme";
 import { Save, X, CloudDownload } from "lucide-react-native";
 import { fetchPageMetadata } from "../utils/metadata";
 
+function normalizeUrl(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
 export function AddLinkModal() {
   const {
     showAddModal,
@@ -46,7 +53,7 @@ export function AddLinkModal() {
   }, [editingLink, showAddModal]);
 
   const handleFetch = async () => {
-    const trimmedUrl = url.trim();
+    const trimmedUrl = normalizeUrl(url);
     if (!trimmedUrl || isFetching) return;
     setIsFetching(true);
     try {
@@ -60,7 +67,7 @@ export function AddLinkModal() {
   };
 
   const handleSave = async () => {
-    const trimmedUrl = url.trim();
+    const trimmedUrl = normalizeUrl(url);
     if (!trimmedUrl) return;
     setSaveError("");
     const result = editingLink
