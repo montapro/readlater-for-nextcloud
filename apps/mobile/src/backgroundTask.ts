@@ -58,7 +58,12 @@ export async function registerBackgroundSyncAsync(
 
 export async function unregisterBackgroundSyncAsync(): Promise<void> {
   try {
-    await BackgroundFetch.unregisterTaskAsync(BACKGROUND_SYNC_TASK);
+    const isRegistered = await TaskManager.isTaskRegisteredAsync(
+      BACKGROUND_SYNC_TASK
+    );
+    if (isRegistered) {
+      await BackgroundFetch.unregisterTaskAsync(BACKGROUND_SYNC_TASK);
+    }
   } catch (error) {
     console.error("ReadLater: failed to unregister background sync", error);
   }

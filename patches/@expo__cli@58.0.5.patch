@@ -1,0 +1,36 @@
+diff --git a/build/src/start/platforms/ios/AppleDeviceManager.js b/build/src/start/platforms/ios/AppleDeviceManager.js
+index 840d0ce827c6668b253384c57bd510837b835937..5c5666c4ba045bfc44988e7b117cd9979e162c81 100644
+--- a/build/src/start/platforms/ios/AppleDeviceManager.js
++++ b/build/src/start/platforms/ios/AppleDeviceManager.js
+@@ -274,18 +274,19 @@ class AppleDeviceManager extends _DeviceManager.DeviceManager {
+         }
+     }
+     async activateWindowAsync() {
+-        await (0, _ensureSimulatorAppRunning.ensureSimulatorAppRunningAsync)(this.device);
+-        // If we're in interactive mode, we can attempt to focus the Simulator app.
+-        // In non-interactive mode, we should assume this is an agent and not attempt to focus the Simulator app since it doesn't need focus.
+-        if ((0, _interactive.isInteractive)()) {
+-            // TODO: Focus the individual window
+-            await (0, _osascript().spawnAsync)([
+-                `if application "Simulator" is running then`,
+-                `tell application "Simulator" to activate`,
+-                `else if application "DeviceHub" is running then`,
+-                `tell application "DeviceHub" to activate`,
+-                `end if`
+-            ]);
++        try {
++            await (0, _ensureSimulatorAppRunning.ensureSimulatorAppRunningAsync)(this.device);
++            if ((0, _interactive.isInteractive)()) {
++                await (0, _osascript().spawnAsync)([
++                    `if application "Simulator" is running then`,
++                    `tell application "Simulator" to activate`,
++                    `else if application "DeviceHub" is running then`,
++                    `tell application "DeviceHub" to activate`,
++                    `end if`
++                ]);
++            }
++        } catch (error) {
++            // Focusing the simulator window is cosmetic; ignore failures (e.g. missing Automation permission).
+         }
+     }
+     getExpoGoAppId() {

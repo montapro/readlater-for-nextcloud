@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@expo/cli@58.0.5':
+    hash: 2e62de5b4f8c8be602616a7dfc32edc150623b077beabef42fbf9a53ac173fe7
+    path: patches/@expo__cli@58.0.5.patch
+
 importers:
 
   .:
@@ -129,6 +134,9 @@ importers:
       react-native:
         specifier: 0.88.0-rc.1
         version: 0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0)
+      react-native-safe-area-context:
+        specifier: ~5.9.1
+        version: 5.9.1(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
     devDependencies:
       '@eslint/js':
         specifier: ^9.0.0
@@ -3028,6 +3036,12 @@ packages:
   react-is@18.3.1:
     resolution: {integrity: sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==}
 
+  react-native-safe-area-context@5.9.1:
+    resolution: {integrity: sha512-Zpx9Iwg6VhgNarWFpcIM61xK2lUbSfSXemQUmcvOVRpux49lJsUompY1S3E5jKUJbLq233qEpj28DgmXVsgZMQ==}
+    peerDependencies:
+      react: '*'
+      react-native: '*'
+
   react-native-svg@15.15.5:
     resolution: {integrity: sha512-L4go5jA+GWutdJ/JucuN20cjAbMg1HmMtAP+wZ+3JLCf6Jd0bhXQHxciRP/AQm/FlrIEZwkMcHNZP+FXAiic0w==}
     peerDependencies:
@@ -4258,7 +4272,7 @@ snapshots:
       '@eslint/core': 0.17.0
       levn: 0.4.1
 
-  '@expo/cli@58.0.5(@expo/dom-webview@58.0.1)(expo-constants@58.0.5(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3))(expo-font@58.0.2(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo@58.0.0-preview.5)(react-dom@19.2.7(react@19.3.0))(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)':
+  '@expo/cli@58.0.5(patch_hash=2e62de5b4f8c8be602616a7dfc32edc150623b077beabef42fbf9a53ac173fe7)(@expo/dom-webview@58.0.1)(expo-constants@58.0.5(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3))(expo-font@58.0.2(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo@58.0.0-preview.5)(react-dom@19.2.7(react@19.3.0))(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)':
     dependencies:
       2g: 0.4.4(typescript@6.0.3)
       '@expo/code-signing-certificates': 0.0.6
@@ -5955,7 +5969,7 @@ snapshots:
   expo@58.0.0-preview.5(@babel/core@7.29.7)(@expo/dom-webview@58.0.1)(react-dom@19.2.7(react@19.3.0))(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3):
     dependencies:
       '@babel/runtime': 7.29.7
-      '@expo/cli': 58.0.5(@expo/dom-webview@58.0.1)(expo-constants@58.0.5(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3))(expo-font@58.0.2(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo@58.0.0-preview.5)(react-dom@19.2.7(react@19.3.0))(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+      '@expo/cli': 58.0.5(patch_hash=2e62de5b4f8c8be602616a7dfc32edc150623b077beabef42fbf9a53ac173fe7)(@expo/dom-webview@58.0.1)(expo-constants@58.0.5(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3))(expo-font@58.0.2(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo@58.0.0-preview.5)(react-dom@19.2.7(react@19.3.0))(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
       '@expo/config': 58.0.0(typescript@6.0.3)
       '@expo/config-plugins': 58.0.2(typescript@6.0.3)
       '@expo/devtools': 58.0.1(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
@@ -6787,6 +6801,11 @@ snapshots:
     optional: true
 
   react-is@18.3.1: {}
+
+  react-native-safe-area-context@5.9.1(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0):
+    dependencies:
+      react: 19.3.0
+      react-native: 0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0)
 
   react-native-svg@15.15.5(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0):
     dependencies:

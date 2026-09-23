@@ -1,5 +1,6 @@
 import React from "react";
-import { StyleSheet, View, SafeAreaView } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import {
   ReadLaterProvider,
@@ -40,9 +41,11 @@ function AppContent() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <ReadLaterProvider>
-        <AppContent />
-      </ReadLaterProvider>
+      <SafeAreaProvider>
+        <ReadLaterProvider>
+          <AppContent />
+        </ReadLaterProvider>
+      </SafeAreaProvider>
     </ErrorBoundary>
   );
 }
