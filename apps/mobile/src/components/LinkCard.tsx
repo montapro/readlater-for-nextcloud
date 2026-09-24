@@ -122,6 +122,7 @@ const styles = StyleSheet.create({
   },
   cardIcon: {
     backgroundColor: "#ffffff",
+    padding: 2,
     borderRadius: 6,
     marginTop: 2,
   },
