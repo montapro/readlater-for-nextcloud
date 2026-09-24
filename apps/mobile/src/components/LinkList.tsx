@@ -93,8 +93,9 @@ export function LinkList() {
 
 const styles = StyleSheet.create({
   listContainer: {
-    padding: 0,
-    gap: 0,
+    paddingTop: 6,
+    paddingBottom: 6,
+    gap: 6,
     flexGrow: 1,
   },
   listHeader: {
