@@ -30,6 +30,9 @@ export function AddLinkModal() {
   const [title, setTitle] = useState("");
   const [isFetching, setIsFetching] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [prefetchedFavicon, setPrefetchedFavicon] = useState<
+    string | undefined
+  >(undefined);
 
   const isEditing = editingLink !== null;
 
@@ -44,6 +47,7 @@ export function AddLinkModal() {
     }
     setSaveError("");
     setIsFetching(false);
+    setPrefetchedFavicon(undefined);
   }, [editingLink, showAddModal]);
 
   const handleFetch = async () => {
@@ -55,6 +59,7 @@ export function AddLinkModal() {
       if (meta.title) {
         setTitle(meta.title);
       }
+      setPrefetchedFavicon(meta.faviconData);
     } finally {
       setIsFetching(false);
     }
@@ -65,15 +70,25 @@ export function AddLinkModal() {
     if (!trimmedUrl) return;
     setSaveError("");
     const result = editingLink
-      ? await handleUpdateLink(editingLink.id, {
-          url: trimmedUrl,
-          title: title.trim() || trimmedUrl,
-        })
-      : await handleAddLink(trimmedUrl, title.trim() || undefined);
+      ? await handleUpdateLink(
+          editingLink.id,
+          {
+            url: trimmedUrl,
+            title: title.trim() || trimmedUrl,
+          },
+          prefetchedFavicon
+        )
+      : await handleAddLink(
+          trimmedUrl,
+          title.trim() || undefined,
+          undefined,
+          prefetchedFavicon
+        );
     if (result.ok) {
       setUrl("");
       setTitle("");
       setEditingLink(null);
+      setPrefetchedFavicon(undefined);
     } else {
       setSaveError("Invalid URL");
     }
@@ -85,6 +100,7 @@ export function AddLinkModal() {
     setTitle("");
     setSaveError("");
     setEditingLink(null);
+    setPrefetchedFavicon(undefined);
   };
 
   return (
@@ -131,6 +147,7 @@ export function AddLinkModal() {
             onChangeText={(t) => {
               setUrl(t);
               setSaveError("");
+              setPrefetchedFavicon(undefined);
             }}
           />
           {saveError ? (

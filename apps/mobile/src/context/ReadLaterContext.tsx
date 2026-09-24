@@ -64,12 +64,14 @@ interface ReadLaterContextValue {
   handleDeleteLink: (id: string) => void;
   handleUpdateLink: (
     id: string,
-    updates: Partial<Omit<Link, "id" | "addedAt">>
+    updates: Partial<Omit<Link, "id" | "addedAt">>,
+    faviconData?: string
   ) => Promise<{ ok: boolean; error?: string }>;
   handleAddLink: (
     url: string,
     title?: string,
-    fetchTitle?: boolean
+    fetchTitle?: boolean,
+    faviconData?: string
   ) => Promise<{ ok: boolean; error?: string }>;
   handleMarkAllRead: () => Promise<void>;
   handleDeleteAll: () => Promise<void>;
@@ -375,7 +377,8 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     async (
       url: string,
       title?: string,
-      fetchTitle?: boolean
+      fetchTitle?: boolean,
+      faviconData?: string
     ): Promise<{ ok: boolean; error?: string }> => {
       try {
         url = normalizeUrl(url);
@@ -389,7 +392,17 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
         showStatus("Link saved!", "success");
         await doRefreshLinks(config);
 
-        // Fetch page metadata (title + favicon) in the background
+        // Favicon was prefetched manually (fetch button) — upload it directly
+        if (faviconData) {
+          const iconPath = await client.saveIcon(savedLink.id, faviconData);
+          if (iconPath) {
+            await client.updateLink(savedLink.id, { faviconPath: iconPath });
+            await doRefreshLinks(config);
+          }
+          return { ok: true };
+        }
+
+        // Otherwise fetch page metadata (title + favicon) in the background
         fetchPageMetadata(url)
           .then(async (meta) => {
             const updates: Partial<Link> = {};
@@ -426,13 +439,20 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   const handleUpdateLink = useCallback(
     async (
       id: string,
-      updates: Partial<Omit<Link, "id" | "addedAt">>
+      updates: Partial<Omit<Link, "id" | "addedAt">>,
+      faviconData?: string
     ): Promise<{ ok: boolean; error?: string }> => {
       try {
         const client = getClient(config);
         const normalizedUpdates = updates.url
           ? { ...updates, url: normalizeUrl(updates.url) }
           : updates;
+        if (faviconData) {
+          const iconPath = await client.saveIcon(id, faviconData);
+          if (iconPath) {
+            normalizedUpdates.faviconPath = iconPath;
+          }
+        }
         await client.updateLink(id, normalizedUpdates);
         setShowAddModal(false);
         setEditingLink(null);
