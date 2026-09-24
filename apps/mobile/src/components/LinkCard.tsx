@@ -110,8 +110,8 @@ export function LinkCard({ link }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 10,
-    borderWidth: 1,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
     overflow: "hidden",
   },
   cardHeader: {
