@@ -127,6 +127,7 @@ const styles = StyleSheet.create({
   favicon: {
     width: 24,
     height: 24,
+    borderRadius: 3,
   },
   cardContent: {
     flex: 1,
