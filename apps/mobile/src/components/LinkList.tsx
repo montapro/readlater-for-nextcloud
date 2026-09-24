@@ -41,31 +41,29 @@ export function LinkList() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {processedLinks.length > 0 && (
-        <View
-          style={[
-            styles.listHeader,
-            { borderBottomColor: colors.border, backgroundColor: colors.background },
-          ]}
-        >
-          <FilterDropdown />
-          <View style={styles.batchActions}>
-            <TouchableOpacity
-              onPress={handleMarkAllRead}
-              disabled={!hasUnreadValue}
-              style={{ opacity: hasUnreadValue ? 1 : 0.3 }}
-            >
-              <CheckCheck color={colors.textSecondary} size={20} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleDeleteAll}>
-              <Trash2 color={colors.textSecondary} size={20} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleRefresh} disabled={loading}>
-              <RefreshCw color={colors.textSecondary} size={20} />
-            </TouchableOpacity>
-          </View>
+      <View
+        style={[
+          styles.listHeader,
+          { borderBottomColor: colors.border, backgroundColor: colors.background },
+        ]}
+      >
+        <FilterDropdown />
+        <View style={styles.batchActions}>
+          <TouchableOpacity
+            onPress={handleMarkAllRead}
+            disabled={!hasUnreadValue}
+            style={{ opacity: hasUnreadValue ? 1 : 0.3 }}
+          >
+            <CheckCheck color={colors.textSecondary} size={20} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleDeleteAll}>
+            <Trash2 color={colors.textSecondary} size={20} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleRefresh} disabled={loading}>
+            <RefreshCw color={colors.textSecondary} size={20} />
+          </TouchableOpacity>
         </View>
-      )}
+      </View>
 
       <FlatList
         data={processedLinks}
