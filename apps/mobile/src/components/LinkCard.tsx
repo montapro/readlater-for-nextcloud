@@ -38,7 +38,7 @@ export function LinkCard({ link }: Props) {
         styles.card,
         {
           backgroundColor: link.isRead ? colors.cardRead : colors.card,
-          borderColor: link.isRead ? colors.border : colors.border,
+          borderBottomColor: colors.border,
           opacity: link.isRead ? 0.8 : 1,
         },
       ]}
@@ -110,8 +110,7 @@ export function LinkCard({ link }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 12,
-    borderWidth: 1,
+    borderBottomWidth: 1,
     overflow: "hidden",
   },
   cardHeader: {
