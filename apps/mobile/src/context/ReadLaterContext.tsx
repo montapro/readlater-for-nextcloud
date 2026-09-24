@@ -49,8 +49,11 @@ interface ReadLaterContextValue {
   refreshLinks: () => Promise<void>;
   saveSettings: () => Promise<void>;
   testConnection: () => Promise<void>;
-  handleToggleRead: (id: string, isRead: boolean) => Promise<void>;
-  handleDeleteLink: (id: string) => void;
+  handleToggleRead: (id: string, isRead: boolean) => Promise<boolean>;
+  handleDeleteLink: (
+    id: string,
+    options?: { confirm?: boolean }
+  ) => Promise<boolean>;
   handleUpdateLink: (
     id: string,
     updates: Partial<Omit<Link, "id" | "addedAt">>,
@@ -313,40 +316,51 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   }, [config, doRefreshLinks, showStatus]);
 
   const handleToggleRead = useCallback(
-    async (id: string, isRead: boolean) => {
+    async (id: string, isRead: boolean): Promise<boolean> => {
       try {
         const client = getClient(config);
         await client.updateLink(id, { isRead: !isRead });
         await doRefreshLinks(config);
+        return true;
       } catch (_err) {
         showStatus("Failed to update link.", "error");
+        return false;
       }
     },
     [config, doRefreshLinks, showStatus]
   );
 
   const handleDeleteLink = useCallback(
-    (id: string) => {
-      Alert.alert("Delete Link", "Are you sure?", [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const client = getClient(config);
-              const link = links.find((l) => l.id === id);
-              await client.deleteLink(id);
-              if (link?.faviconPath) {
-                client.deleteIcon(link.faviconPath).catch(() => {});
-              }
-              await doRefreshLinks(config);
-            } catch (_err) {
-              showStatus("Failed to delete link.", "error");
-            }
+    (id: string, options?: { confirm?: boolean }): Promise<boolean> => {
+      const performDelete = async (): Promise<boolean> => {
+        try {
+          const client = getClient(config);
+          const link = links.find((l) => l.id === id);
+          await client.deleteLink(id);
+          if (link?.faviconPath) {
+            client.deleteIcon(link.faviconPath).catch(() => {});
+          }
+          await doRefreshLinks(config);
+          return true;
+        } catch (_err) {
+          showStatus("Failed to delete link.", "error");
+          return false;
+        }
+      };
+
+      if (options?.confirm === false) {
+        return performDelete();
+      }
+      return new Promise((resolve) => {
+        Alert.alert("Delete Link", "Are you sure?", [
+          { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => resolve(await performDelete()),
           },
-        },
-      ]);
+        ]);
+      });
     },
     [config, links, doRefreshLinks, showStatus]
   );

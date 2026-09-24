@@ -13,6 +13,7 @@ import { BottomBar } from "./src/components/BottomBar";
 import { StatusBanner } from "./src/components/StatusBanner";
 import { AddLinkModal } from "./src/components/AddLinkModal";
 import { ErrorBoundary } from "./src/components/ErrorBoundary";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 function AppContent() {
   const { showSettings } = useReadLater();
@@ -37,13 +38,15 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ErrorBoundary>
-      <SafeAreaProvider>
-        <ReadLaterProvider>
-          <AppContent />
-        </ReadLaterProvider>
-      </SafeAreaProvider>
-    </ErrorBoundary>
+    <GestureHandlerRootView style={styles.container}>
+      <ErrorBoundary>
+        <SafeAreaProvider>
+          <ReadLaterProvider>
+            <AppContent />
+          </ReadLaterProvider>
+        </SafeAreaProvider>
+      </ErrorBoundary>
+    </GestureHandlerRootView>
   );
 }
 
