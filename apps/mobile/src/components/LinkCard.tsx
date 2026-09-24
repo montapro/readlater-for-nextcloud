@@ -122,13 +122,12 @@ const styles = StyleSheet.create({
   },
   cardIcon: {
     backgroundColor: "#ffffff",
-    padding: 4,
     borderRadius: 6,
     marginTop: 2,
   },
   favicon: {
-    width: 24,
-    height: 24,
+    width: 20,
+    height: 20,
     borderRadius: 3,
   },
   cardContent: {
