@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useReadLater } from "../context/ReadLaterContext";
 import { useTheme } from "../hooks/useTheme";
 import { Home, Plus, Settings } from "lucide-react-native";
@@ -8,6 +9,7 @@ export function BottomBar() {
   const { showSettings, setShowSettings, unreadCount, setShowAddModal } =
     useReadLater();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const activeColor = (active: boolean) =>
     active ? colors.primary : colors.textMuted;
@@ -16,7 +18,11 @@ export function BottomBar() {
     <View
       style={[
         styles.bottomBar,
-        { backgroundColor: colors.card, borderTopColor: colors.border },
+        {
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
+          paddingBottom: insets.bottom,
+        },
       ]}
     >
       <TouchableOpacity
