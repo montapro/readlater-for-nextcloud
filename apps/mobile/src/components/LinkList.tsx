@@ -3,6 +3,7 @@ import { View, Text, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity }
 import { useReadLater } from "../context/ReadLaterContext";
 import { useTheme } from "../hooks/useTheme";
 import { LinkCard } from "./LinkCard";
+import { FilterDropdown } from "./FilterDropdown";
 import { CheckCheck, Trash2, Link2, RefreshCw } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 
@@ -50,13 +51,7 @@ export function LinkList() {
         ListHeaderComponent={
           processedLinks.length > 0 ? (
             <View style={[styles.listHeader, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.listTitle, { color: colors.textSecondary }]}>
-                {filter === "all"
-                  ? `All Links (${processedLinks.length})`
-                  : filter === "read"
-                    ? `Read (${processedLinks.length})`
-                    : `Unread (${processedLinks.length})`}
-              </Text>
+              <FilterDropdown />
               <View style={styles.batchActions}>
                 <TouchableOpacity
                   onPress={handleMarkAllRead}
@@ -105,11 +100,6 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 8,
     borderBottomWidth: 1,
-  },
-  listTitle: {
-    fontSize: 12,
-    fontWeight: "700",
-    textTransform: "uppercase",
   },
   batchActions: {
     flexDirection: "row",
