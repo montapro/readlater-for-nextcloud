@@ -3,7 +3,7 @@ import { View, Text, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity }
 import { useReadLater } from "../context/ReadLaterContext";
 import { useTheme } from "../hooks/useTheme";
 import { LinkCard } from "./LinkCard";
-import { FilterDropdown } from "./FilterDropdown";
+import { FilterSortMenu } from "./FilterSortMenu";
 import { CheckCheck, Trash2, Link2, RefreshCw } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 
@@ -44,7 +44,7 @@ export function LinkList() {
       <View
         style={[styles.listHeader, { backgroundColor: colors.background }]}
       >
-        <FilterDropdown />
+        <FilterSortMenu />
         <View style={styles.batchActions}>
           <TouchableOpacity
             onPress={handleMarkAllRead}
