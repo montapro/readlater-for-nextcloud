@@ -6,6 +6,11 @@ import type { FilterType } from "../types";
 import { ChevronDown } from "lucide-react-native";
 
 const ORDER: FilterType[] = ["unread", "read", "all"];
+const BUTTON_LABELS: Record<FilterType, string> = {
+  unread: "Unread",
+  read: "Read",
+  all: "All",
+};
 
 export function FilterDropdown() {
   const { links, filter, setFilter } = useReadLater();
@@ -15,15 +20,15 @@ export function FilterDropdown() {
   const readCount = links.length - unreadCount;
   const allCount = links.length;
 
-  const labels: Record<FilterType, string> = {
-    unread: `Unread (${unreadCount})`,
-    read: `Read (${readCount})`,
-    all: `All (${allCount})`,
+  const counts: Record<FilterType, number> = {
+    unread: unreadCount,
+    read: readCount,
+    all: allCount,
   };
 
   const handlePress = () => {
     if (Platform.OS !== "ios") return;
-    const options = ORDER.map((f) => labels[f]);
+    const options = ORDER.map((f) => `${BUTTON_LABELS[f]} (${counts[f]})`);
     ActionSheetIOS.showActionSheetWithOptions(
       {
         options: [...options, "Cancel"],
@@ -40,7 +45,7 @@ export function FilterDropdown() {
   return (
     <TouchableOpacity style={styles.button} onPress={handlePress}>
       <Text style={[styles.label, { color: colors.primary }]}>
-        {labels[filter]}
+        {BUTTON_LABELS[filter]}
       </Text>
       <ChevronDown color={colors.primary} size={14} />
     </TouchableOpacity>
