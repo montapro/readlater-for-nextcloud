@@ -104,12 +104,120 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 function parseMetadata(html: string, baseUrl: string): PageMetadata {
   const ogTitle = matchMeta(html, "og:title");
   const htmlTitle = html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1];
+  const rawTitle = ogTitle || htmlTitle;
 
   return {
-    title: (ogTitle || htmlTitle)?.trim() || undefined,
+    title: rawTitle ? decodeHtmlEntities(rawTitle).trim() : undefined,
     faviconUrl: extractFaviconUrl(html, baseUrl),
   };
 }
+
+/**
+ * Decodes HTML entities (`&uuml;` → `ü`, `&#39;` → `'`) so titles from
+ * page metadata show correctly. Handles numeric and common named entities.
+ */
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) =>
+      String.fromCodePoint(parseInt(hex, 16))
+    )
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
+    .replace(/&[a-zA-Z][a-zA-Z0-9]*;/g, (entity) => {
+      const mapped = HTML_ENTITIES[entity.toLowerCase()];
+      if (mapped === undefined) return entity;
+      // Preserve case: &Auml; (Ä) vs &auml; (ä)
+      const inner = entity.slice(1, -1);
+      if (
+        inner.charAt(0) === inner.charAt(0).toUpperCase() &&
+        inner.charAt(0) !== inner.charAt(0).toLowerCase()
+      ) {
+        return mapped.charAt(0).toUpperCase() + mapped.slice(1);
+      }
+      return mapped;
+    });
+}
+
+const HTML_ENTITIES: Record<string, string> = {
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&apos;": "'",
+  "&nbsp;": "\u00a0",
+  "&middot;": "\u00b7",
+  "&mdash;": "\u2014",
+  "&ndash;": "\u2013",
+  "&hellip;": "\u2026",
+  "&lsquo;": "\u2018",
+  "&rsquo;": "\u2019",
+  "&ldquo;": "\u201c",
+  "&rdquo;": "\u201d",
+  "&laquo;": "\u00ab",
+  "&raquo;": "\u00bb",
+  "&copy;": "\u00a9",
+  "&reg;": "\u00ae",
+  "&trade;": "\u2122",
+  "&deg;": "\u00b0",
+  "&euro;": "\u20ac",
+  // Latin-1 Supplement — covers German, French, Spanish, etc.
+  "&iexcl;": "\u00a1",
+  "&cent;": "\u00a2",
+  "&pound;": "\u00a3",
+  "&curren;": "\u00a4",
+  "&yen;": "\u00a5",
+  "&brvbar;": "\u00a6",
+  "&sect;": "\u00a7",
+  "&uml;": "\u00a8",
+  "&ordf;": "\u00aa",
+  "&not;": "\u00ac",
+  "&shy;": "\u00ad",
+  "&macr;": "\u00af",
+  "&plusmn;": "\u00b1",
+  "&sup2;": "\u00b2",
+  "&sup3;": "\u00b3",
+  "&acute;": "\u00b4",
+  "&micro;": "\u00b5",
+  "&para;": "\u00b6",
+  "&cedil;": "\u00b8",
+  "&sup1;": "\u00b9",
+  "&ordm;": "\u00ba",
+  "&frac14;": "\u00bc",
+  "&frac12;": "\u00bd",
+  "&frac34;": "\u00be",
+  "&iquest;": "\u00bf",
+  "&agrave;": "\u00c0",
+  "&aacute;": "\u00c1",
+  "&acirc;": "\u00c2",
+  "&atilde;": "\u00c3",
+  "&auml;": "\u00c4",
+  "&aring;": "\u00c5",
+  "&aelig;": "\u00c6",
+  "&ccedil;": "\u00c7",
+  "&egrave;": "\u00c8",
+  "&eacute;": "\u00c9",
+  "&ecirc;": "\u00ca",
+  "&euml;": "\u00cb",
+  "&igrave;": "\u00cc",
+  "&iacute;": "\u00cd",
+  "&icirc;": "\u00ce",
+  "&iuml;": "\u00cf",
+  "&eth;": "\u00f0",
+  "&ntilde;": "\u00f1",
+  "&ograve;": "\u00f2",
+  "&oacute;": "\u00f3",
+  "&ocirc;": "\u00f4",
+  "&ouml;": "\u00f6",
+  "&otilde;": "\u00f5",
+  "&divide;": "\u00f7",
+  "&oslash;": "\u00f8",
+  "&ugrave;": "\u00f9",
+  "&uacute;": "\u00fa",
+  "&ucirc;": "\u00fb",
+  "&uuml;": "\u00fc",
+  "&yacute;": "\u00fd",
+  "&thorn;": "\u00fe",
+  "&yuml;": "\u00ff",
+};
 
 function matchMeta(html: string, key: string): string | undefined {
   const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
