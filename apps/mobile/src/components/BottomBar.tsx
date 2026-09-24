@@ -21,7 +21,7 @@ export function BottomBar() {
         {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
-          paddingBottom: insets.bottom,
+          paddingBottom: Math.max(insets.bottom - 10, 6),
         },
       ]}
     >
