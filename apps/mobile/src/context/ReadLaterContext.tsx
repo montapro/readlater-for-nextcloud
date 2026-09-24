@@ -25,6 +25,7 @@ import {
 } from "../backgroundTask";
 import { useShareIntent } from "expo-share-intent";
 import { fetchPageMetadata } from "../utils/metadata";
+import { normalizeUrl } from "../utils";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -377,6 +378,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       fetchTitle?: boolean
     ): Promise<{ ok: boolean; error?: string }> => {
       try {
+        url = normalizeUrl(url);
         const client = getClient(config);
         const savedLink = await client.addLink({
           url,
@@ -428,7 +430,10 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     ): Promise<{ ok: boolean; error?: string }> => {
       try {
         const client = getClient(config);
-        await client.updateLink(id, updates);
+        const normalizedUpdates = updates.url
+          ? { ...updates, url: normalizeUrl(updates.url) }
+          : updates;
+        await client.updateLink(id, normalizedUpdates);
         setShowAddModal(false);
         setEditingLink(null);
         showStatus("Link updated!", "success");

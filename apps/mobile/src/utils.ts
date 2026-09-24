@@ -15,3 +15,13 @@ export function formatDate(dateString: string): string {
   if (diffInDays < 2) return "Yesterday";
   return date.toISOString().split("T")[0];
 }
+
+/**
+ * Prepends `https://` when the given value has no protocol.
+ */
+export function normalizeUrl(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}

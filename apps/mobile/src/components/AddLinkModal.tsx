@@ -14,13 +14,7 @@ import { useReadLater } from "../context/ReadLaterContext";
 import { useTheme } from "../hooks/useTheme";
 import { Save, X, CloudDownload } from "lucide-react-native";
 import { fetchPageMetadata } from "../utils/metadata";
-
-function normalizeUrl(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return trimmed;
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  return `https://${trimmed}`;
-}
+import { normalizeUrl } from "../utils";
 
 export function AddLinkModal() {
   const {
