@@ -3,8 +3,7 @@ import { View, Text, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity }
 import { useReadLater } from "../context/ReadLaterContext";
 import { useTheme } from "../hooks/useTheme";
 import { LinkCard } from "./LinkCard";
-import { FilterBar } from "./FilterBar";
-import { CheckCheck, Trash2, Link2 } from "lucide-react-native";
+import { CheckCheck, Trash2, Link2, RefreshCw } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 
 export function LinkList() {
@@ -32,7 +31,6 @@ export function LinkList() {
   if (loading && links.length === 0) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <FilterBar />
         <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
       </View>
     );
@@ -42,8 +40,6 @@ export function LinkList() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <FilterBar />
-
       <FlatList
         data={processedLinks}
         keyExtractor={(item) => item.id}
@@ -71,6 +67,9 @@ export function LinkList() {
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handleDeleteAll}>
                   <Trash2 color={colors.textSecondary} size={20} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleRefresh} disabled={loading}>
+                  <RefreshCw color={colors.textSecondary} size={20} />
                 </TouchableOpacity>
               </View>
             </View>
