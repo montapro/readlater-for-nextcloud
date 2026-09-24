@@ -44,7 +44,7 @@ export function LinkCard({ link }: Props) {
       ]}
     >
       <View style={styles.cardHeader}>
-        <View style={[styles.cardIcon, { backgroundColor: colors.iconBg }]}>
+        <View style={styles.cardIcon}>
           {showFavicon && imageSource ? (
             <Image
               source={imageSource}
@@ -121,14 +121,12 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   cardIcon: {
-    padding: 8,
-    borderRadius: 8,
+    padding: 4,
     marginTop: 2,
   },
   favicon: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
+    width: 24,
+    height: 24,
   },
   cardContent: {
     flex: 1,
