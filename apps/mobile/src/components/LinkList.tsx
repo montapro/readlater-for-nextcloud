@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { View, Text, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useReadLater } from "../context/ReadLaterContext";
 import { useTheme } from "../hooks/useTheme";
 import { LinkCard } from "./LinkCard";
@@ -60,6 +61,11 @@ export function LinkList() {
             <RefreshCw color={colors.textSecondary} size={20} />
           </TouchableOpacity>
         </View>
+        <LinearGradient
+          colors={[colors.background, "transparent"]}
+          style={styles.headerFade}
+          pointerEvents="none"
+        />
       </View>
 
       <FlatList
@@ -98,6 +104,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingTop: 10,
     paddingBottom: 8,
+    zIndex: 1,
+  },
+  headerFade: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: -8,
+    height: 16,
   },
   batchActions: {
     flexDirection: "row",
