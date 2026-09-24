@@ -13,16 +13,7 @@ import * as SecureStore from "expo-secure-store";
 import * as Linking from "expo-linking";
 import * as Notifications from "expo-notifications";
 import { ReadLaterClient, WebDAVConfig, Link } from "@readlater/core";
-import type { FilterType, SortType, StatusMessage, RefreshInterval, ThemeType } from "../types";
-import {
-  DEFAULT_REFRESH_INTERVAL,
-  intervalToMs,
-  intervalToBackgroundMinutes,
-} from "../refreshIntervals";
-import {
-  registerBackgroundSyncAsync,
-  unregisterBackgroundSyncAsync,
-} from "../backgroundTask";
+import type { FilterType, SortType, StatusMessage, ThemeType } from "../types";
 import { useShareIntent } from "expo-share-intent";
 import { fetchPageMetadata } from "../utils/metadata";
 import { normalizeUrl } from "../utils";
@@ -45,8 +36,6 @@ interface ReadLaterContextValue {
   setFilter: (f: FilterType) => void;
   sortBy: SortType;
   setSortBy: (s: SortType) => void;
-  refreshInterval: RefreshInterval;
-  setRefreshInterval: (interval: RefreshInterval) => void;
   theme: ThemeType;
   setTheme: (theme: ThemeType) => void;
   unreadCount: number;
@@ -146,9 +135,6 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   const [showSettings, setShowSettings] = useState(false);
   const [filter, setFilter] = useState<FilterType>("unread");
   const [sortBy, setSortBy] = useState<SortType>("newest");
-  const [refreshInterval, setRefreshInterval] = useState<RefreshInterval>(
-    DEFAULT_REFRESH_INTERVAL
-  );
   const [theme, setTheme] = useState<ThemeType>("system");
   const [status, setStatus] = useState<StatusMessage>({
     text: "",
@@ -198,21 +184,19 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const [url, user, pass, savedFilter, savedSortBy, savedInterval, savedTheme, linksCache] =
+        const [url, user, pass, savedFilter, savedSortBy, savedTheme, linksCache] =
           await Promise.all([
             SecureStore.getItemAsync("webdav_url"),
             SecureStore.getItemAsync("webdav_user"),
             SecureStore.getItemAsync("webdav_pass"),
             SecureStore.getItemAsync("pref_filter"),
             SecureStore.getItemAsync("pref_sortBy"),
-            SecureStore.getItemAsync("pref_refreshInterval"),
             SecureStore.getItemAsync("pref_theme"),
             SecureStore.getItemAsync("links_cache"),
           ]);
 
         if (savedFilter) setFilter(savedFilter as FilterType);
         if (savedSortBy) setSortBy(savedSortBy as SortType);
-        if (savedInterval) setRefreshInterval(savedInterval as RefreshInterval);
         if (savedTheme) setTheme(savedTheme as ThemeType);
 
         // Restore cached links for immediate display
@@ -262,12 +246,6 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     SecureStore.setItemAsync("pref_sortBy", sortBy).catch(() => {});
   }, [sortBy]);
-
-  useEffect(() => {
-    SecureStore.setItemAsync("pref_refreshInterval", refreshInterval).catch(
-      () => {}
-    );
-  }, [refreshInterval]);
 
   useEffect(() => {
     SecureStore.setItemAsync("pref_theme", theme).catch(() => {});
@@ -539,9 +517,6 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   const appStateRef = useRef<AppStateStatus | null>(
     (AppState.currentState as AppStateStatus | null) ?? null
   );
-  const [appState, setAppState] = useState<AppStateStatus | null>(
-    (AppState.currentState as AppStateStatus | null) ?? null
-  );
 
   // Update the app icon badge whenever the unread count changes (iOS only)
   useEffect(() => {
@@ -555,38 +530,12 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     const subscription = AppState.addEventListener("change", (nextState) => {
       const previous = appStateRef.current;
       appStateRef.current = nextState;
-      setAppState(nextState);
       if (nextState === "active" && previous !== "active" && isConfigured) {
         refreshLinks();
       }
     });
     return () => subscription.remove();
   }, [isConfigured, refreshLinks]);
-
-  // Exact refresh timer while the app is open and in the foreground
-  useEffect(() => {
-    if (!isConfigured || appState !== "active") return;
-    const ms = intervalToMs(refreshInterval);
-    if (ms == null) return;
-    const timer = setInterval(() => {
-      refreshLinks();
-    }, ms);
-    return () => clearInterval(timer);
-  }, [isConfigured, appState, refreshInterval, refreshLinks]);
-
-  // Register/unregister the iOS background task based on the interval
-  useEffect(() => {
-    if (!isConfigured) {
-      unregisterBackgroundSyncAsync();
-      return;
-    }
-    const minutes = intervalToBackgroundMinutes(refreshInterval);
-    if (minutes == null) {
-      unregisterBackgroundSyncAsync();
-    } else {
-      registerBackgroundSyncAsync(minutes);
-    }
-  }, [isConfigured, refreshInterval]);
 
   // Save a URL shared from another app (iOS share extension)
   useEffect(() => {
@@ -632,8 +581,6 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       setFilter,
       sortBy,
       setSortBy,
-      refreshInterval,
-      setRefreshInterval,
       theme,
       setTheme,
       unreadCount,
@@ -667,7 +614,6 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       showSettings,
       filter,
       sortBy,
-      refreshInterval,
       theme,
       unreadCount,
       status,
