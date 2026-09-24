@@ -42,10 +42,7 @@ export function LinkList() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View
-        style={[
-          styles.listHeader,
-          { borderBottomColor: colors.border, backgroundColor: colors.background },
-        ]}
+        style={[styles.listHeader, { backgroundColor: colors.background }]}
       >
         <FilterDropdown />
         <View style={styles.batchActions}>
@@ -101,7 +98,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingTop: 10,
     paddingBottom: 8,
-    borderBottomWidth: 1,
   },
   batchActions: {
     flexDirection: "row",
