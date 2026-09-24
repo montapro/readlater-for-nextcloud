@@ -89,7 +89,7 @@ export function LinkCard({ link }: Props) {
 
       <View style={[styles.cardActions, { backgroundColor: colors.cardActionsBg, borderTopColor: colors.border }]}>
         <TouchableOpacity style={[styles.actionButton, { borderRightColor: colors.border }]} onPress={() => handleDeleteLink(link.id)}>
-          <Trash2 color={colors.destructive} size={18} />
+          <Trash2 color={colors.textSecondary} size={18} />
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.actionButton, { borderRightColor: colors.border }]} onPress={() => { setEditingLink(link); setShowAddModal(true); }}>

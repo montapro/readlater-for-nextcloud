@@ -67,10 +67,10 @@ export function LinkList() {
                   disabled={!hasUnreadValue}
                   style={{ opacity: hasUnreadValue ? 1 : 0.3 }}
                 >
-                  <CheckCheck color={colors.success} size={20} />
+                  <CheckCheck color={colors.textSecondary} size={20} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handleDeleteAll}>
-                  <Trash2 color={colors.destructive} size={20} />
+                  <Trash2 color={colors.textSecondary} size={20} />
                 </TouchableOpacity>
               </View>
             </View>
