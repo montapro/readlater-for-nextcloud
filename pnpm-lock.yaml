@@ -119,9 +119,6 @@ importers:
       expo-haptics:
         specifier: ~58.0.1
         version: 58.0.1(expo@58.0.0-preview.5)
-      expo-linear-gradient:
-        specifier: ~58.0.1
-        version: 58.0.1(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
       expo-linking:
         specifier: ~58.0.5
         version: 58.0.5(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
@@ -2250,13 +2247,6 @@ packages:
     peerDependencies:
       expo: '*'
       react: '*'
-
-  expo-linear-gradient@58.0.1:
-    resolution: {integrity: sha512-u694m9EeR53LJuAU12UcwpzsGHKirz+MVq41iw0RsN7YNtR91djuhuywDAuQlkvWrh4No30RECfc/wWv9mM4sw==}
-    peerDependencies:
-      expo: '*'
-      react: '*'
-      react-native: '*'
 
   expo-linking@58.0.5:
     resolution: {integrity: sha512-fcEO+UWGf2buv93zb1YfAv/6REtWhtfoEw/f2ptqQxaWrDrgfSjsPv3N4pqll6KZSR/upSteimjzuPxZl7Bf6g==}
@@ -6116,12 +6106,6 @@ snapshots:
     dependencies:
       expo: 58.0.0-preview.5(@babel/core@7.29.7)(@expo/dom-webview@58.0.1)(@expo/metro-runtime@58.0.6)(react-dom@19.3.0(react@19.3.0))(react-native-web@0.21.2(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
       react: 19.3.0
-
-  expo-linear-gradient@58.0.1(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0):
-    dependencies:
-      expo: 58.0.0-preview.5(@babel/core@7.29.7)(@expo/dom-webview@58.0.1)(@expo/metro-runtime@58.0.6)(react-dom@19.3.0(react@19.3.0))(react-native-web@0.21.2(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
-      react: 19.3.0
-      react-native: 0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0)
 
   expo-linking@58.0.5(expo@58.0.0-preview.5)(react-native@0.88.0-rc.1(@babel/core@7.29.7)(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3):
     dependencies:
