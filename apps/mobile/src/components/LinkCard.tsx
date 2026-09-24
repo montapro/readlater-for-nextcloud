@@ -121,7 +121,9 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   cardIcon: {
+    backgroundColor: "#ffffff",
     padding: 4,
+    borderRadius: 6,
     marginTop: 2,
   },
   favicon: {
