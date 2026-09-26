@@ -181,11 +181,11 @@ export function AddLinkModal() {
                 {
                   backgroundColor: colors.inputBg,
                   borderColor: colors.inputBorder,
-                  opacity: url.trim() && !isFetching ? 1 : 0.4,
+                  opacity: url.trim() ? 1 : 0.4,
                 },
               ]}
               onPress={handleFetch}
-              disabled={!url.trim() || isFetching}
+              disabled={!url.trim()}
             >
               {isFetching ? (
                 <ActivityIndicator size="small" color={colors.primary} />
