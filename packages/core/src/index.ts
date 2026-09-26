@@ -279,13 +279,16 @@ export class ReadLaterClient {
   }
 
   /**
-   * Removes a single link by ID.
+   * Removes a single link by ID and its stored favicon file(s).
    * Uses optimistic concurrency to prevent data loss from parallel writes.
    */
   async deleteLink(id: string): Promise<void> {
-    await this.withRetry((store) => {
+    const faviconPath = await this.withRetry((store) => {
+      const link = store.links.find((l) => l.id === id);
       store.links = store.links.filter((l) => l.id !== id);
+      return link?.faviconPath;
     });
+    await this.deleteIconsForLink(id, faviconPath);
   }
 
   /**
@@ -299,11 +302,20 @@ export class ReadLaterClient {
 
   /**
    * Deletes all links (resets to empty store) with optimistic concurrency.
+   * Also removes every stored favicon file.
    */
   async deleteAllLinks(): Promise<void> {
-    await this.withRetry((store) => {
+    const targets = await this.withRetry((store) => {
+      const list = store.links.map((l) => ({
+        id: l.id,
+        faviconPath: l.faviconPath,
+      }));
       store.links = [];
+      return list;
     });
+    await Promise.all(
+      targets.map((t) => this.deleteIconsForLink(t.id, t.faviconPath))
+    );
   }
 
   /**
@@ -336,16 +348,45 @@ export class ReadLaterClient {
    * @param faviconPath WebDAV-relative path returned by saveIcon.
    */
   async deleteIcon(faviconPath: string): Promise<void> {
+    const path = faviconPath.startsWith("/") ? faviconPath : `/${faviconPath}`;
     try {
-      await this.client.deleteFile(`/${faviconPath}`);
-    } catch {
-      // Ignore missing files / network errors
+      await this.client.deleteFile(path);
+    } catch (error) {
+      if (!isNotFound(error)) {
+        console.error("ReadLater: Failed to delete icon", path, error);
+      }
     }
+  }
+
+  /**
+   * Deletes every icon file that may belong to a link: the recorded
+   * faviconPath plus id-based candidates in /ReadLater/icons (orphan safety).
+   */
+  private async deleteIconsForLink(
+    id: string,
+    faviconPath?: string
+  ): Promise<void> {
+    const paths = new Set<string>();
+    if (faviconPath) {
+      paths.add(faviconPath.replace(/^\//, ""));
+    }
+    const iconsRel = this.iconsPath.replace(/^\//, "");
+    for (const ext of ICON_EXTENSIONS) {
+      paths.add(`${iconsRel}/${id}.${ext}`);
+    }
+    await Promise.all([...paths].map((p) => this.deleteIcon(p)));
   }
 }
 
 const BASE64_CHARS =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+const ICON_EXTENSIONS = ["png", "ico", "svg"] as const;
+
+function isNotFound(error: unknown): boolean {
+  const e = error as { status?: number; response?: { status?: number } };
+  return e?.status === 404 || e?.response?.status === 404;
+}
 
 function mimeToExtension(mime: string): string {
   if (mime.includes("svg")) return "svg";

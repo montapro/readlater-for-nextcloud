@@ -335,11 +335,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       const performDelete = async (): Promise<boolean> => {
         try {
           const client = getClient(config);
-          const link = links.find((l) => l.id === id);
           await client.deleteLink(id);
-          if (link?.faviconPath) {
-            client.deleteIcon(link.faviconPath).catch(() => {});
-          }
           await doRefreshLinks(config);
           return true;
         } catch (_err) {
@@ -362,7 +358,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
         ]);
       });
     },
-    [config, links, doRefreshLinks, showStatus]
+    [config, doRefreshLinks, showStatus]
   );
 
   const handleAddLink = useCallback(
@@ -490,11 +486,6 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
           onPress: async () => {
             try {
               const client = getClient(config);
-              for (const link of links) {
-                if (link.faviconPath) {
-                  client.deleteIcon(link.faviconPath).catch(() => {});
-                }
-              }
               await client.deleteAllLinks();
               showStatus("All links deleted.", "info");
               await doRefreshLinks(config);
@@ -505,7 +496,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
         },
       ]
     );
-  }, [config, links, doRefreshLinks, showStatus]);
+  }, [config, doRefreshLinks, showStatus]);
 
   const handleOpenLink = useCallback((url: string) => {
     Linking.openURL(url);

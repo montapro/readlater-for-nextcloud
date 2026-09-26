@@ -19,6 +19,7 @@ const mockClient = {
   putFileContents: vi.fn(),
   createDirectory: vi.fn(),
   customRequest: vi.fn(),
+  deleteFile: vi.fn(),
 };
 
 vi.mock("webdav", () => ({
@@ -153,6 +154,7 @@ describe("ReadLaterClient", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockClient.deleteFile.mockResolvedValue(true);
     client = new ReadLaterClient(validConfig);
   });
 
@@ -316,6 +318,38 @@ describe("ReadLaterClient", () => {
 
     it("removes a link", async () => {
       await expect(client.deleteLink(link.id)).resolves.toBeUndefined();
+      const savedArg = mockClient.putFileContents.mock.calls[0][1];
+      const saved = JSON.parse(savedArg as string);
+      expect(saved.links).toEqual([]);
+    });
+
+    it("deletes the recorded faviconPath icon file", async () => {
+      const withIcon = sampleLink({
+        faviconPath: `ReadLater/icons/${link.id}.png`,
+      });
+      mockStore([withIcon]);
+      await client.deleteLink(withIcon.id);
+      expect(mockClient.deleteFile).toHaveBeenCalledWith(
+        `/ReadLater/icons/${link.id}.png`
+      );
+    });
+
+    it("always tries id-based icon candidates in /ReadLater/icons", async () => {
+      await client.deleteLink(link.id);
+      expect(mockClient.deleteFile).toHaveBeenCalledWith(
+        `/ReadLater/icons/${link.id}.png`
+      );
+      expect(mockClient.deleteFile).toHaveBeenCalledWith(
+        `/ReadLater/icons/${link.id}.ico`
+      );
+      expect(mockClient.deleteFile).toHaveBeenCalledWith(
+        `/ReadLater/icons/${link.id}.svg`
+      );
+    });
+
+    it("still resolves when icon deletion fails", async () => {
+      mockClient.deleteFile.mockRejectedValue(new Error("network"));
+      await expect(client.deleteLink(link.id)).resolves.toBeUndefined();
     });
   });
 
@@ -344,7 +378,14 @@ describe("ReadLaterClient", () => {
 
   describe("deleteAllLinks", () => {
     beforeEach(() => {
-      mockStore([sampleLink()]);
+      mockStore([
+        sampleLink(),
+        sampleLink({
+          id: "550e8400-e29b-41d4-a716-446655440003",
+          url: "https://example.com/other",
+          faviconPath: "ReadLater/icons/550e8400-e29b-41d4-a716-446655440003.png",
+        }),
+      ]);
     });
 
     it("deletes all links", async () => {
@@ -352,6 +393,16 @@ describe("ReadLaterClient", () => {
       const savedArg = mockClient.putFileContents.mock.calls[0][1];
       const saved = JSON.parse(savedArg as string);
       expect(saved.links).toEqual([]);
+    });
+
+    it("deletes icon files for every link", async () => {
+      await client.deleteAllLinks();
+      expect(mockClient.deleteFile).toHaveBeenCalledWith(
+        "/ReadLater/icons/550e8400-e29b-41d4-a716-446655440000.png"
+      );
+      expect(mockClient.deleteFile).toHaveBeenCalledWith(
+        "/ReadLater/icons/550e8400-e29b-41d4-a716-446655440003.png"
+      );
     });
   });
 
