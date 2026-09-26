@@ -19,7 +19,7 @@
 
 [[redirects]]
   from = "/dav/*"
-  to = "https://NEXTCLOUD_ORIGIN/:splat"
+  to = "https://cloud.k11e.de/:splat"
   status = 200
 
 [[redirects]]
