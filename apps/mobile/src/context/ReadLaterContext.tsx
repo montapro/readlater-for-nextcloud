@@ -8,20 +8,15 @@ import React, {
   useRef,
   type ReactNode,
 } from "react";
-import { AppState, Platform, type AppStateStatus } from "react-native";
+import { Alert, AppState, Platform, type AppStateStatus } from "react-native";
+import * as SecureStore from "expo-secure-store";
 import * as Linking from "expo-linking";
 import * as Notifications from "expo-notifications";
 import { ReadLaterClient, WebDAVConfig, Link } from "@readlater/core";
 import type { FilterType, SortType, StatusMessage, ThemeType } from "../types";
 import { useShareIntent } from "expo-share-intent";
+import { fetchPageMetadata } from "../utils/metadata";
 import { normalizeUrl } from "../utils";
-import {
-  confirmDialog,
-  storageGet,
-  storageSet,
-  loadPageMetadata,
-  toProxyUrl,
-} from "../utils/webCompat";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -62,13 +57,13 @@ interface ReadLaterContextValue {
   handleUpdateLink: (
     id: string,
     updates: Partial<Omit<Link, "id" | "addedAt">>,
-    favicon?: FaviconPayload
+    faviconData?: string
   ) => Promise<{ ok: boolean; error?: string }>;
   handleAddLink: (
     url: string,
     title?: string,
     fetchTitle?: boolean,
-    favicon?: FaviconPayload
+    faviconData?: string
   ) => Promise<{ ok: boolean; error?: string }>;
   handleMarkAllRead: () => Promise<void>;
   handleDeleteAll: () => Promise<void>;
@@ -76,11 +71,6 @@ interface ReadLaterContextValue {
   getIconSource: (
     link: Link
   ) => { uri: string; headers: Record<string, string> } | undefined;
-}
-
-interface FaviconPayload {
-  data?: string;
-  url?: string;
 }
 
 const ReadLaterContext = createContext<ReadLaterContextValue | null>(null);
@@ -98,7 +88,7 @@ export function useReadLater(): ReadLaterContextValue {
 // ---------------------------------------------------------------------------
 
 function getClient(config: WebDAVConfig): ReadLaterClient {
-  return new ReadLaterClient({ ...config, url: toProxyUrl(config.url) });
+  return new ReadLaterClient(config);
 }
 
 function toBase64(value: string): string {
@@ -199,13 +189,13 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       try {
         const [url, user, pass, savedFilter, savedSortBy, savedTheme, linksCache] =
           await Promise.all([
-            storageGet("webdav_url"),
-            storageGet("webdav_user"),
-            storageGet("webdav_pass"),
-            storageGet("pref_filter"),
-            storageGet("pref_sortBy"),
-            storageGet("pref_theme"),
-            storageGet("links_cache"),
+            SecureStore.getItemAsync("webdav_url"),
+            SecureStore.getItemAsync("webdav_user"),
+            SecureStore.getItemAsync("webdav_pass"),
+            SecureStore.getItemAsync("pref_filter"),
+            SecureStore.getItemAsync("pref_sortBy"),
+            SecureStore.getItemAsync("pref_theme"),
+            SecureStore.getItemAsync("links_cache"),
           ]);
 
         if (savedFilter) setFilter(savedFilter as FilterType);
@@ -253,15 +243,15 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
 
   // Persist filter/sort
   useEffect(() => {
-    storageSet("pref_filter", filter).catch(() => {});
+    SecureStore.setItemAsync("pref_filter", filter).catch(() => {});
   }, [filter]);
 
   useEffect(() => {
-    storageSet("pref_sortBy", sortBy).catch(() => {});
+    SecureStore.setItemAsync("pref_sortBy", sortBy).catch(() => {});
   }, [sortBy]);
 
   useEffect(() => {
-    storageSet("pref_theme", theme).catch(() => {});
+    SecureStore.setItemAsync("pref_theme", theme).catch(() => {});
   }, [theme]);
 
   // -----------------------------------------------------------------------
@@ -274,7 +264,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       const client = getClient(cfg);
       const store = await client.fetchLinks();
       setLinks(store.links);
-      await storageSet("links_cache", JSON.stringify(store.links));
+      await SecureStore.setItemAsync("links_cache", JSON.stringify(store.links));
     } catch (_err) {
       if (links.length > 0) {
         showStatus("Showing cached data – server unreachable.", "info");
@@ -313,9 +303,9 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
 
   const saveSettings = useCallback(async () => {
     try {
-      await storageSet("webdav_url", config.url);
-      await storageSet("webdav_user", config.username || "");
-      await storageSet("webdav_pass", config.password || "");
+      await SecureStore.setItemAsync("webdav_url", config.url);
+      await SecureStore.setItemAsync("webdav_user", config.username || "");
+      await SecureStore.setItemAsync("webdav_pass", config.password || "");
       setIsConfigured(true);
       setShowSettings(false);
       await doRefreshLinks(config);
@@ -357,11 +347,16 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       if (options?.confirm === false) {
         return performDelete();
       }
-      return confirmDialog(
-        "Delete Link",
-        "Are you sure?",
-        { label: "Delete", destructive: true }
-      ).then((confirmed) => (confirmed ? performDelete() : false));
+      return new Promise((resolve) => {
+        Alert.alert("Delete Link", "Are you sure?", [
+          { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => resolve(await performDelete()),
+          },
+        ]);
+      });
     },
     [config, doRefreshLinks, showStatus]
   );
@@ -371,7 +366,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       url: string,
       title?: string,
       fetchTitle?: boolean,
-      favicon?: FaviconPayload
+      faviconData?: string
     ): Promise<{ ok: boolean; error?: string }> => {
       try {
         url = normalizeUrl(url);
@@ -386,25 +381,17 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
         await doRefreshLinks(config);
 
         // Favicon was prefetched manually (fetch button) — upload it directly
-        if (favicon?.data) {
-          const iconPath = await client.saveIcon(savedLink.id, favicon.data);
+        if (faviconData) {
+          const iconPath = await client.saveIcon(savedLink.id, faviconData);
           if (iconPath) {
-            await client.updateLink(savedLink.id, {
-              faviconPath: iconPath,
-              ...(favicon.url ? { faviconUrl: favicon.url } : {}),
-            });
+            await client.updateLink(savedLink.id, { faviconPath: iconPath });
             await doRefreshLinks(config);
           }
           return { ok: true };
         }
-        if (favicon?.url) {
-          await client.updateLink(savedLink.id, { faviconUrl: favicon.url });
-          await doRefreshLinks(config);
-          return { ok: true };
-        }
 
         // Otherwise fetch page metadata (title + favicon) in the background
-        loadPageMetadata(url)
+        fetchPageMetadata(url)
           .then(async (meta) => {
             const updates: Partial<Link> = {};
             const shouldUpdateTitle = fetchTitle || savedLink.title === url;
@@ -441,20 +428,18 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     async (
       id: string,
       updates: Partial<Omit<Link, "id" | "addedAt">>,
-      favicon?: FaviconPayload
+      faviconData?: string
     ): Promise<{ ok: boolean; error?: string }> => {
       try {
         const client = getClient(config);
         const normalizedUpdates = updates.url
           ? { ...updates, url: normalizeUrl(updates.url) }
           : updates;
-        if (favicon?.data) {
-          const iconPath = await client.saveIcon(id, favicon.data);
+        if (faviconData) {
+          const iconPath = await client.saveIcon(id, faviconData);
           if (iconPath) {
             normalizedUpdates.faviconPath = iconPath;
           }
-        } else if (favicon?.url) {
-          normalizedUpdates.faviconUrl = favicon.url;
         }
         await client.updateLink(id, normalizedUpdates);
         setShowAddModal(false);
@@ -471,37 +456,46 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   );
 
   const handleMarkAllRead = useCallback(async () => {
-    const confirmed = await confirmDialog(
-      "Mark all as read",
-      "Mark all links as read?",
-      { label: "Mark All" }
-    );
-    if (!confirmed) return;
-    try {
-      const client = getClient(config);
-      await client.markAllAsRead();
-      showStatus("All marked as read!", "success");
-      await doRefreshLinks(config);
-    } catch (_err) {
-      showStatus("Failed to mark all as read.", "error");
-    }
+    Alert.alert("Mark all as read", "Mark all links as read?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Mark All",
+        onPress: async () => {
+          try {
+            const client = getClient(config);
+            await client.markAllAsRead();
+            showStatus("All marked as read!", "success");
+            await doRefreshLinks(config);
+          } catch (_err) {
+            showStatus("Failed to mark all as read.", "error");
+          }
+        },
+      },
+    ]);
   }, [config, links, doRefreshLinks, showStatus]);
 
   const handleDeleteAll = useCallback(async () => {
-    const confirmed = await confirmDialog(
+    Alert.alert(
       "Delete All",
       "DANGER: Delete ALL links permanently?",
-      { label: "Delete All", destructive: true }
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete All",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const client = getClient(config);
+              await client.deleteAllLinks();
+              showStatus("All links deleted.", "info");
+              await doRefreshLinks(config);
+            } catch (_err) {
+              showStatus("Failed to delete all links.", "error");
+            }
+          },
+        },
+      ]
     );
-    if (!confirmed) return;
-    try {
-      const client = getClient(config);
-      await client.deleteAllLinks();
-      showStatus("All links deleted.", "info");
-      await doRefreshLinks(config);
-    } catch (_err) {
-      showStatus("Failed to delete all links.", "error");
-    }
   }, [config, doRefreshLinks, showStatus]);
 
   const handleOpenLink = useCallback((url: string) => {
@@ -512,7 +506,6 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     (
       link: Link
     ): { uri: string; headers: Record<string, string> } | undefined => {
-      if (Platform.OS === "web") return undefined;
       if (!link.faviconPath) return undefined;
       const base = config.url.endsWith("/") ? config.url : config.url + "/";
       const uri = base + link.faviconPath;

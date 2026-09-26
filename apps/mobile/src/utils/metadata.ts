@@ -1,6 +1,5 @@
 const FETCH_TIMEOUT_MS = 5000;
 const MAX_FAVICON_SIZE = 200_000;
-const MAX_HTML_SIZE = 500_000;
 const HTML_HEADERS = {
   Accept: "text/html,application/xhtml+xml",
   "User-Agent":
@@ -24,7 +23,7 @@ export async function fetchPageMetadata(url: string): Promise<PageMetadata> {
         HTML_HEADERS
       );
       if (!response.ok) return {};
-      const html = (await response.text()).slice(0, MAX_HTML_SIZE);
+      const html = await response.text();
       const { title, faviconUrl } = parseMetadata(html, finalUrl);
       const faviconData = faviconUrl
         ? await fetchFaviconData(faviconUrl)
@@ -93,21 +92,13 @@ async function fetchFaviconData(url: string): Promise<string | undefined> {
   }
 }
 
-async function blobToDataUrl(blob: Blob): Promise<string> {
-  if (typeof FileReader !== "undefined") {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(blob);
-    });
-  }
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  let binary = "";
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return `data:${blob.type || "image/png"};base64,${btoa(binary)}`;
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
 }
 
 function parseMetadata(html: string, baseUrl: string): PageMetadata {

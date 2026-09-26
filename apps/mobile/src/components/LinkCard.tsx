@@ -29,22 +29,17 @@ export function LinkCard({ link }: Props) {
     filter,
   } = useReadLater();
   const { colors } = useTheme();
-  const [failedSource, setFailedSource] = useState<string | null>(null);
+  const [faviconFailed, setFaviconFailed] = useState(false);
 
   const iconSource = getIconSource(link);
-  const candidates: { uri: string; headers?: Record<string, string> }[] = [];
+  let imageSource: { uri: string; headers?: Record<string, string> } | null =
+    null;
   if (iconSource) {
-    candidates.push({ uri: iconSource.uri, headers: iconSource.headers });
+    imageSource = { uri: iconSource.uri, headers: iconSource.headers };
+  } else if (link.faviconData) {
+    imageSource = { uri: link.faviconData };
   }
-  if (link.faviconData) {
-    candidates.push({ uri: link.faviconData });
-  }
-  if (link.faviconUrl) {
-    candidates.push({ uri: link.faviconUrl });
-  }
-  const imageSource =
-    candidates.find((candidate) => candidate.uri !== failedSource) ?? null;
-  const showFavicon = imageSource !== null;
+  const showFavicon = imageSource !== null && !faviconFailed;
 
   const matchesFilter = (isRead: boolean) =>
     filter === "all" || (filter === "read" ? isRead : !isRead);
@@ -72,7 +67,7 @@ export function LinkCard({ link }: Props) {
               <Image
                 source={imageSource}
                 style={styles.favicon}
-                onError={() => setFailedSource(imageSource.uri)}
+                onError={() => setFaviconFailed(true)}
               />
             ) : (
               <Link2

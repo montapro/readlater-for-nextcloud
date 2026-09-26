@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Platform,
 } from "react-native";
 import { useReadLater } from "../context/ReadLaterContext";
 import { useTheme } from "../hooks/useTheme";
@@ -62,12 +61,6 @@ export function SettingsPanel() {
       {hasUrl && !isUrlValid && (
         <Text style={[styles.hint, { color: colors.destructive }]}>
           URL must start with https://
-        </Text>
-      )}
-      {Platform.OS === "web" && hasUrl && (
-        <Text style={[styles.hint, { color: colors.textMuted }]}>
-          Web requests are proxied – the URL host must match NEXTCLOUD_ORIGIN
-          in netlify.toml.
         </Text>
       )}
 
