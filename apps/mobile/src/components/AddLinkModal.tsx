@@ -13,7 +13,7 @@ import {
 import { useReadLater } from "../context/ReadLaterContext";
 import { useTheme } from "../hooks/useTheme";
 import { Save, X, CloudDownload } from "lucide-react-native";
-import { fetchPageMetadata } from "../utils/metadata";
+import { loadPageMetadata } from "../utils/webCompat";
 import { normalizeUrl } from "../utils";
 
 export function AddLinkModal() {
@@ -31,7 +31,7 @@ export function AddLinkModal() {
   const [isFetching, setIsFetching] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [prefetchedFavicon, setPrefetchedFavicon] = useState<
-    string | undefined
+    { data?: string; url?: string } | undefined
   >(undefined);
 
   const isEditing = editingLink !== null;
@@ -55,11 +55,15 @@ export function AddLinkModal() {
     if (!trimmedUrl || isFetching) return;
     setIsFetching(true);
     try {
-      const meta = await fetchPageMetadata(trimmedUrl);
+      const meta = await loadPageMetadata(trimmedUrl);
       if (meta.title) {
         setTitle(meta.title);
       }
-      setPrefetchedFavicon(meta.faviconData);
+      setPrefetchedFavicon(
+        meta.faviconData || meta.faviconUrl
+          ? { data: meta.faviconData, url: meta.faviconUrl }
+          : undefined
+      );
     } finally {
       setIsFetching(false);
     }

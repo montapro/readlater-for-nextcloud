@@ -14,9 +14,14 @@ import * as Notifications from "expo-notifications";
 import { ReadLaterClient, WebDAVConfig, Link } from "@readlater/core";
 import type { FilterType, SortType, StatusMessage, ThemeType } from "../types";
 import { useShareIntent } from "expo-share-intent";
-import { fetchPageMetadata } from "../utils/metadata";
 import { normalizeUrl } from "../utils";
-import { confirmDialog, storageGet, storageSet } from "../utils/webCompat";
+import {
+  confirmDialog,
+  storageGet,
+  storageSet,
+  loadPageMetadata,
+  toProxyUrl,
+} from "../utils/webCompat";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -57,13 +62,13 @@ interface ReadLaterContextValue {
   handleUpdateLink: (
     id: string,
     updates: Partial<Omit<Link, "id" | "addedAt">>,
-    faviconData?: string
+    favicon?: FaviconPayload
   ) => Promise<{ ok: boolean; error?: string }>;
   handleAddLink: (
     url: string,
     title?: string,
     fetchTitle?: boolean,
-    faviconData?: string
+    favicon?: FaviconPayload
   ) => Promise<{ ok: boolean; error?: string }>;
   handleMarkAllRead: () => Promise<void>;
   handleDeleteAll: () => Promise<void>;
@@ -71,6 +76,11 @@ interface ReadLaterContextValue {
   getIconSource: (
     link: Link
   ) => { uri: string; headers: Record<string, string> } | undefined;
+}
+
+interface FaviconPayload {
+  data?: string;
+  url?: string;
 }
 
 const ReadLaterContext = createContext<ReadLaterContextValue | null>(null);
@@ -88,7 +98,7 @@ export function useReadLater(): ReadLaterContextValue {
 // ---------------------------------------------------------------------------
 
 function getClient(config: WebDAVConfig): ReadLaterClient {
-  return new ReadLaterClient(config);
+  return new ReadLaterClient({ ...config, url: toProxyUrl(config.url) });
 }
 
 function toBase64(value: string): string {
@@ -361,7 +371,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       url: string,
       title?: string,
       fetchTitle?: boolean,
-      faviconData?: string
+      favicon?: FaviconPayload
     ): Promise<{ ok: boolean; error?: string }> => {
       try {
         url = normalizeUrl(url);
@@ -376,17 +386,25 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
         await doRefreshLinks(config);
 
         // Favicon was prefetched manually (fetch button) — upload it directly
-        if (faviconData) {
-          const iconPath = await client.saveIcon(savedLink.id, faviconData);
+        if (favicon?.data) {
+          const iconPath = await client.saveIcon(savedLink.id, favicon.data);
           if (iconPath) {
-            await client.updateLink(savedLink.id, { faviconPath: iconPath });
+            await client.updateLink(savedLink.id, {
+              faviconPath: iconPath,
+              ...(favicon.url ? { faviconUrl: favicon.url } : {}),
+            });
             await doRefreshLinks(config);
           }
           return { ok: true };
         }
+        if (favicon?.url) {
+          await client.updateLink(savedLink.id, { faviconUrl: favicon.url });
+          await doRefreshLinks(config);
+          return { ok: true };
+        }
 
         // Otherwise fetch page metadata (title + favicon) in the background
-        fetchPageMetadata(url)
+        loadPageMetadata(url)
           .then(async (meta) => {
             const updates: Partial<Link> = {};
             const shouldUpdateTitle = fetchTitle || savedLink.title === url;
@@ -423,18 +441,20 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     async (
       id: string,
       updates: Partial<Omit<Link, "id" | "addedAt">>,
-      faviconData?: string
+      favicon?: FaviconPayload
     ): Promise<{ ok: boolean; error?: string }> => {
       try {
         const client = getClient(config);
         const normalizedUpdates = updates.url
           ? { ...updates, url: normalizeUrl(updates.url) }
           : updates;
-        if (faviconData) {
-          const iconPath = await client.saveIcon(id, faviconData);
+        if (favicon?.data) {
+          const iconPath = await client.saveIcon(id, favicon.data);
           if (iconPath) {
             normalizedUpdates.faviconPath = iconPath;
           }
+        } else if (favicon?.url) {
+          normalizedUpdates.faviconUrl = favicon.url;
         }
         await client.updateLink(id, normalizedUpdates);
         setShowAddModal(false);
@@ -492,6 +512,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     (
       link: Link
     ): { uri: string; headers: Record<string, string> } | undefined => {
+      if (Platform.OS === "web") return undefined;
       if (!link.faviconPath) return undefined;
       const base = config.url.endsWith("/") ? config.url : config.url + "/";
       const uri = base + link.faviconPath;

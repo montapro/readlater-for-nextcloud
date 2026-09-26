@@ -1,5 +1,6 @@
 import { Alert, Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import { fetchPageMetadata, type PageMetadata } from "./metadata";
 
 export interface ConfirmOptions {
   label: string;
@@ -24,6 +25,29 @@ export function confirmDialog(
       },
     ]);
   });
+}
+
+export function toProxyUrl(url: string): string {
+  if (Platform.OS !== "web") return url;
+  try {
+    const parsed = new URL(url);
+    return `${window.location.origin}/dav${parsed.pathname}${parsed.search}`;
+  } catch {
+    return url;
+  }
+}
+
+export async function loadPageMetadata(url: string): Promise<PageMetadata> {
+  if (Platform.OS !== "web") return fetchPageMetadata(url);
+  try {
+    const response = await fetch(
+      `/api/meta?url=${encodeURIComponent(url)}`
+    );
+    if (!response.ok) return {};
+    return (await response.json()) as PageMetadata;
+  } catch {
+    return {};
+  }
 }
 
 const STORAGE_PREFIX = "readlater_";
