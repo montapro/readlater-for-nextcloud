@@ -38,6 +38,7 @@ export function LinkList() {
   }
 
   const hasUnreadValue = links.some((l) => !l.isRead);
+  const hasVisibleLinks = processedLinks.length > 0;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -53,7 +54,11 @@ export function LinkList() {
           >
             <CheckCheck color={colors.textSecondary} size={20} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleDeleteAll}>
+          <TouchableOpacity
+            onPress={handleDeleteAll}
+            disabled={!hasVisibleLinks}
+            style={{ opacity: hasVisibleLinks ? 1 : 0.3 }}
+          >
             <Trash2 color={colors.textSecondary} size={20} />
           </TouchableOpacity>
           <TouchableOpacity onPress={handleRefresh} disabled={loading}>

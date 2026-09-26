@@ -76,7 +76,12 @@ export function LinkList() {
             </button>
             <button
               onClick={handleDeleteAll}
-              className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+              disabled={processedLinks.length === 0}
+              className={`transition-colors cursor-pointer disabled:cursor-default ${
+                processedLinks.length === 0
+                  ? "text-muted/30"
+                  : "text-muted-foreground hover:text-destructive"
+              }`}
               title="Delete all"
             >
               <Trash2 className="w-3.5 h-3.5" />
