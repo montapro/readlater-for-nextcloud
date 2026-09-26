@@ -8,8 +8,7 @@ import React, {
   useRef,
   type ReactNode,
 } from "react";
-import { Alert, AppState, Platform, type AppStateStatus } from "react-native";
-import * as SecureStore from "expo-secure-store";
+import { AppState, Platform, type AppStateStatus } from "react-native";
 import * as Linking from "expo-linking";
 import * as Notifications from "expo-notifications";
 import { ReadLaterClient, WebDAVConfig, Link } from "@readlater/core";
@@ -17,6 +16,7 @@ import type { FilterType, SortType, StatusMessage, ThemeType } from "../types";
 import { useShareIntent } from "expo-share-intent";
 import { fetchPageMetadata } from "../utils/metadata";
 import { normalizeUrl } from "../utils";
+import { confirmDialog, storageGet, storageSet } from "../utils/webCompat";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -189,13 +189,13 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       try {
         const [url, user, pass, savedFilter, savedSortBy, savedTheme, linksCache] =
           await Promise.all([
-            SecureStore.getItemAsync("webdav_url"),
-            SecureStore.getItemAsync("webdav_user"),
-            SecureStore.getItemAsync("webdav_pass"),
-            SecureStore.getItemAsync("pref_filter"),
-            SecureStore.getItemAsync("pref_sortBy"),
-            SecureStore.getItemAsync("pref_theme"),
-            SecureStore.getItemAsync("links_cache"),
+            storageGet("webdav_url"),
+            storageGet("webdav_user"),
+            storageGet("webdav_pass"),
+            storageGet("pref_filter"),
+            storageGet("pref_sortBy"),
+            storageGet("pref_theme"),
+            storageGet("links_cache"),
           ]);
 
         if (savedFilter) setFilter(savedFilter as FilterType);
@@ -243,15 +243,15 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
 
   // Persist filter/sort
   useEffect(() => {
-    SecureStore.setItemAsync("pref_filter", filter).catch(() => {});
+    storageSet("pref_filter", filter).catch(() => {});
   }, [filter]);
 
   useEffect(() => {
-    SecureStore.setItemAsync("pref_sortBy", sortBy).catch(() => {});
+    storageSet("pref_sortBy", sortBy).catch(() => {});
   }, [sortBy]);
 
   useEffect(() => {
-    SecureStore.setItemAsync("pref_theme", theme).catch(() => {});
+    storageSet("pref_theme", theme).catch(() => {});
   }, [theme]);
 
   // -----------------------------------------------------------------------
@@ -264,7 +264,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       const client = getClient(cfg);
       const store = await client.fetchLinks();
       setLinks(store.links);
-      await SecureStore.setItemAsync("links_cache", JSON.stringify(store.links));
+      await storageSet("links_cache", JSON.stringify(store.links));
     } catch (_err) {
       if (links.length > 0) {
         showStatus("Showing cached data – server unreachable.", "info");
@@ -303,9 +303,9 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
 
   const saveSettings = useCallback(async () => {
     try {
-      await SecureStore.setItemAsync("webdav_url", config.url);
-      await SecureStore.setItemAsync("webdav_user", config.username || "");
-      await SecureStore.setItemAsync("webdav_pass", config.password || "");
+      await storageSet("webdav_url", config.url);
+      await storageSet("webdav_user", config.username || "");
+      await storageSet("webdav_pass", config.password || "");
       setIsConfigured(true);
       setShowSettings(false);
       await doRefreshLinks(config);
@@ -347,16 +347,11 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       if (options?.confirm === false) {
         return performDelete();
       }
-      return new Promise((resolve) => {
-        Alert.alert("Delete Link", "Are you sure?", [
-          { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
-          {
-            text: "Delete",
-            style: "destructive",
-            onPress: async () => resolve(await performDelete()),
-          },
-        ]);
-      });
+      return confirmDialog(
+        "Delete Link",
+        "Are you sure?",
+        { label: "Delete", destructive: true }
+      ).then((confirmed) => (confirmed ? performDelete() : false));
     },
     [config, doRefreshLinks, showStatus]
   );
@@ -456,46 +451,37 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   );
 
   const handleMarkAllRead = useCallback(async () => {
-    Alert.alert("Mark all as read", "Mark all links as read?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Mark All",
-        onPress: async () => {
-          try {
-            const client = getClient(config);
-            await client.markAllAsRead();
-            showStatus("All marked as read!", "success");
-            await doRefreshLinks(config);
-          } catch (_err) {
-            showStatus("Failed to mark all as read.", "error");
-          }
-        },
-      },
-    ]);
+    const confirmed = await confirmDialog(
+      "Mark all as read",
+      "Mark all links as read?",
+      { label: "Mark All" }
+    );
+    if (!confirmed) return;
+    try {
+      const client = getClient(config);
+      await client.markAllAsRead();
+      showStatus("All marked as read!", "success");
+      await doRefreshLinks(config);
+    } catch (_err) {
+      showStatus("Failed to mark all as read.", "error");
+    }
   }, [config, links, doRefreshLinks, showStatus]);
 
   const handleDeleteAll = useCallback(async () => {
-    Alert.alert(
+    const confirmed = await confirmDialog(
       "Delete All",
       "DANGER: Delete ALL links permanently?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete All",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const client = getClient(config);
-              await client.deleteAllLinks();
-              showStatus("All links deleted.", "info");
-              await doRefreshLinks(config);
-            } catch (_err) {
-              showStatus("Failed to delete all links.", "error");
-            }
-          },
-        },
-      ]
+      { label: "Delete All", destructive: true }
     );
+    if (!confirmed) return;
+    try {
+      const client = getClient(config);
+      await client.deleteAllLinks();
+      showStatus("All links deleted.", "info");
+      await doRefreshLinks(config);
+    } catch (_err) {
+      showStatus("Failed to delete all links.", "error");
+    }
   }, [config, doRefreshLinks, showStatus]);
 
   const handleOpenLink = useCallback((url: string) => {
