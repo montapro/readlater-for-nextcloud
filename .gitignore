@@ -38,3 +38,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+
+# Local Netlify folder
+.netlify
+
+# Netlify CLI local artifacts
+deno.lock
