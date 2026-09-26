@@ -1,4 +1,4 @@
-import { fetchPageMetadata } from "../../apps/mobile/src/utils/metadata";
+import { fetchPageMetadata } from "../../src/utils/metadata";
 
 const MAX_URL_LENGTH = 2000;
 
