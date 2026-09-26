@@ -26,7 +26,8 @@
       "package": "com.markuskrause.readlater"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "backgroundColor": "#f8fafc"
     },
     "plugins": [
       "expo-secure-store",
