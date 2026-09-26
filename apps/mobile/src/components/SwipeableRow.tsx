@@ -13,6 +13,7 @@ interface SwipeableRowProps {
   onSwipeLeft: () => Promise<boolean>;
   onSwipeRight: () => Promise<boolean>;
   staysVisibleOnRight: boolean;
+  backgroundColor: string;
 }
 
 export function SwipeableRow({
@@ -20,6 +21,7 @@ export function SwipeableRow({
   onSwipeLeft,
   onSwipeRight,
   staysVisibleOnRight,
+  backgroundColor,
 }: SwipeableRowProps) {
   const { colors } = useTheme();
   const swipeableRef = useRef<SwipeableMethods>(null);
@@ -64,11 +66,10 @@ export function SwipeableRow({
 
     if (direction === SwipeDirection.LEFT) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-      const result = onSwipeLeft();
-      runExit("left");
-      result
+      onSwipeLeft()
         .then((ok) => {
-          if (!ok) restore();
+          if (ok) runExit("left");
+          else restore();
         })
         .catch(() => restore());
       return;
@@ -94,8 +95,13 @@ export function SwipeableRow({
   return (
     <ReanimatedSwipeable
       ref={swipeableRef}
-      overshootLeft={false}
-      overshootRight={false}
+      overshootFriction={8}
+      animationOptions={{
+        mass: 1,
+        damping: 24,
+        stiffness: 220,
+        overshootClamping: false,
+      }}
       renderLeftActions={() => (
         <Animated.View
           style={[
@@ -121,7 +127,12 @@ export function SwipeableRow({
         triggeredRef.current = false;
       }}
     >
-      <Animated.View style={{ transform: [{ translateX: exitX }] }}>
+      <Animated.View
+        style={{
+          transform: [{ translateX: exitX }],
+          backgroundColor,
+        }}
+      >
         {children}
       </Animated.View>
     </ReanimatedSwipeable>

@@ -46,9 +46,10 @@ export function LinkCard({ link }: Props) {
 
   return (
     <SwipeableRow
-      onSwipeLeft={() => handleDeleteLink(link.id, { confirm: false })}
+      onSwipeLeft={() => handleDeleteLink(link.id)}
       onSwipeRight={() => handleToggleRead(link.id, link.isRead)}
       staysVisibleOnRight={matchesFilter(!link.isRead)}
+      backgroundColor={link.isRead ? colors.cardRead : colors.card}
     >
       <View
         style={[
