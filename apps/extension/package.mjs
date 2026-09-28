@@ -2,7 +2,7 @@ import fs from 'fs';
 import { execSync } from 'child_process';
 
 function zip(name) {
-  const cmd = `rm -f ../${name} && 7z a -tzip ../${name} . > /dev/null`;
+  const cmd = `rm -f ../${name} && zip -qr ../${name} . -x "*.DS_Store"`;
   execSync(cmd, { cwd: distPath, shell: true });
 }
 
