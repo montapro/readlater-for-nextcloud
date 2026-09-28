@@ -1,5 +1,8 @@
+import "./utils/patchFetchCredentials";
 import browser from "webextension-polyfill";
-import { ReadLaterClient, WebDAVConfig, Link } from "@readlater/core";
+import { ReadLaterClient, Link } from "@readlater/core";
+import { readStoredConfig, toWebDavConfig } from "./utils/storedConfig";
+import { runLoginFlow } from "./loginFlowWorker";
 
 /**
  * Updates the extension badge: shows unread count (blue) or green checkmark
@@ -35,15 +38,10 @@ async function updateTabBadge(tabId: number, url?: string) {
  * Syncs links from WebDAV and updates the cache.
  */
 async function syncLinks() {
-  const data = await browser.storage.local.get(["webdav_url", "webdav_user", "webdav_pass"]);
-  if (data.webdav_url) {
+  const stored = await readStoredConfig();
+  if (stored) {
     try {
-      const config: WebDAVConfig = {
-        url: data.webdav_url as string,
-        username: data.webdav_user as string,
-        password: (data.webdav_pass as string) || ""
-      };
-      const client = new ReadLaterClient(config);
+      const client = new ReadLaterClient(toWebDavConfig(stored));
       const store = await client.fetchLinks();
       
       await browser.storage.local.set({ links_cache: store.links });
@@ -73,7 +71,16 @@ browser.tabs.onActivated.addListener(async (activeInfo) => {
 
 // React to storage changes – re-sync when config changes
 browser.storage.onChanged.addListener((changes) => {
-  if (changes.webdav_url || changes.webdav_user || changes.webdav_pass) {
+  if (
+    changes.nc_server ||
+    changes.nc_username ||
+    changes.nc_apppw ||
+    changes.nc_uid ||
+    changes.nc_basepath ||
+    changes.webdav_url ||
+    changes.webdav_user ||
+    changes.webdav_pass
+  ) {
     syncLinks();
   }
   if (changes.links_cache) {
@@ -90,8 +97,11 @@ browser.runtime.onInstalled.addListener(() => syncLinks());
 browser.runtime.onStartup.addListener(() => syncLinks());
 
 browser.runtime.onMessage.addListener((message: unknown) => {
-  const msg = message as { type?: string };
+  const msg = message as { type?: string; instance?: string };
   if (msg.type === "SYNC_LINKS") {
     syncLinks();
+  }
+  if (msg.type === "START_LOGIN_FLOW" && msg.instance) {
+    runLoginFlow(msg.instance);
   }
 });

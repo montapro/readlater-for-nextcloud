@@ -5,20 +5,35 @@ import React, {
   useEffect,
   useMemo,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
 import browser from "webextension-polyfill";
-import { ReadLaterClient, WebDAVConfig, Link } from "@readlater/core";
+import { ReadLaterClient, Link } from "@readlater/core";
 import type { FilterType, SortType, StatusMessage } from "../types";
 import { useTheme } from "../hooks/useTheme";
+import {
+  normalizeBasePath,
+  normalizeInstance,
+} from "../utils/loginFlow";
+import { toWebDavConfig } from "../utils/storedConfig";
 
 // ---------------------------------------------------------------------------
 // Context value type
 // ---------------------------------------------------------------------------
 
+export interface NextcloudConfigState {
+  server: string;
+  username: string;
+  appPassword: string;
+  uid: string;
+  basePath: string;
+}
+
+export type LoginStatus = "idle" | "connecting" | "waiting" | "finishing";
+
 interface ReadLaterContextValue {
-  config: WebDAVConfig;
-  updateConfig: (partial: Partial<WebDAVConfig>) => void;
+  config: NextcloudConfigState;
   isConfigured: boolean;
   links: Link[];
   loading: boolean;
@@ -40,9 +55,12 @@ interface ReadLaterContextValue {
   isUrlValid: boolean;
   isAlreadySavedAndUnread: boolean;
   hasUnread: boolean;
+  loginStatus: LoginStatus;
+  connectToNextcloud: (instance: string, basePath: string) => Promise<void>;
+  disconnect: () => Promise<void>;
+  setBasePath: (path: string) => Promise<void>;
   refreshLinks: () => Promise<void>;
   testConnection: () => Promise<void>;
-  saveSettings: () => Promise<void>;
   saveCurrentLink: () => Promise<void>;
   handleToggleRead: (id: string, isRead: boolean) => Promise<void>;
   handleDeleteLink: (id: string) => Promise<void>;
@@ -51,6 +69,14 @@ interface ReadLaterContextValue {
 }
 
 const ReadLaterContext = createContext<ReadLaterContextValue | null>(null);
+
+const EMPTY_CONFIG: NextcloudConfigState = {
+  server: "",
+  username: "",
+  appPassword: "",
+  uid: "",
+  basePath: "",
+};
 
 export function useReadLater(): ReadLaterContextValue {
   const ctx = useContext(ReadLaterContext);
@@ -64,22 +90,15 @@ export function useReadLater(): ReadLaterContextValue {
 // Provider
 // ---------------------------------------------------------------------------
 
-function getClient(config: WebDAVConfig): ReadLaterClient {
-  return new ReadLaterClient(config);
+function getClient(config: NextcloudConfigState): ReadLaterClient {
+  return new ReadLaterClient(toWebDavConfig(config));
 }
 
 export function ReadLaterProvider({ children }: { children: ReactNode }) {
   // --- Config state ---
-  const [config, setConfig] = useState<WebDAVConfig>({
-    url: "",
-    username: "",
-    password: "",
-  });
+  const [config, setConfig] = useState<NextcloudConfigState>(EMPTY_CONFIG);
   const [isConfigured, setIsConfigured] = useState(false);
-
-  const updateConfig = useCallback((partial: Partial<WebDAVConfig>) => {
-    setConfig((prev) => ({ ...prev, ...partial }));
-  }, []);
+  const [loginStatus, setLoginStatus] = useState<LoginStatus>("idle");
 
   // --- Data state ---
   const [links, setLinks] = useState<Link[]>([]);
@@ -103,10 +122,13 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     title?: string;
   }>({});
 
+  const configRef = useRef(config);
+  configRef.current = config;
+
   // --- Computed ---
   const isUrlValid = useMemo(
-    () => config.url.trim().startsWith("https://"),
-    [config.url],
+    () => normalizeInstance(config.server).startsWith("https://"),
+    [config.server],
   );
 
   const isAlreadySavedAndUnread = useMemo(
@@ -141,40 +163,45 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function init() {
       try {
-        const result = await browser.storage.local.get([
-          "webdav_url",
-          "webdav_user",
-          "webdav_pass",
-          "draft_url",
-          "draft_user",
-          "draft_pass",
+        const stored = await browser.storage.local.get([
+          "nc_server",
+          "nc_username",
+          "nc_apppw",
+          "nc_uid",
+          "nc_basepath",
+          "nc_login_status",
           "links_cache",
           "pref_filter",
           "pref_sortBy",
         ]);
 
-        if (result.links_cache) setLinks(result.links_cache as Link[]);
-        if (result.pref_filter) setFilter(result.pref_filter as FilterType);
-        if (result.pref_sortBy) setSortBy(result.pref_sortBy as SortType);
+        if (stored.links_cache) setLinks(stored.links_cache as Link[]);
+        if (stored.pref_filter) setFilter(stored.pref_filter as FilterType);
+        if (stored.pref_sortBy) setSortBy(stored.pref_sortBy as SortType);
+        if (stored.nc_login_status) {
+          setLoginStatus(stored.nc_login_status as LoginStatus);
+        }
 
-        if (result.webdav_url) {
-          const loadedConfig: WebDAVConfig = {
-            url: result.webdav_url as string,
-            username: (result.webdav_user as string) || "",
-            password: (result.webdav_pass as string) || "",
+        if (stored.nc_server && stored.nc_uid) {
+          const loaded: NextcloudConfigState = {
+            server: stored.nc_server as string,
+            username: (stored.nc_username as string) || "",
+            appPassword: (stored.nc_apppw as string) || "",
+            uid: stored.nc_uid as string,
+            basePath: (stored.nc_basepath as string) || "/",
           };
-          setConfig(loadedConfig);
+          console.log(
+            "ReadLater: loaded config",
+            loaded.server,
+            "user=" + loaded.username,
+            "uid=" + loaded.uid,
+            "basePath=" + loaded.basePath,
+            "pwLength=" + (loaded.appPassword || "").length
+          );
+          setConfig(loaded);
           setIsConfigured(true);
-          doRefreshLinks(loadedConfig);
+          doRefreshLinks(loaded);
         } else {
-          // Restore draft form data (auto-saved but never committed)
-          if (result.draft_url) {
-            setConfig({
-              url: result.draft_url as string,
-              username: (result.draft_user as string) || "",
-              password: (result.draft_pass as string) || "",
-            });
-          }
           setShowSettings(true);
         }
       } catch (err) {
@@ -218,26 +245,10 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   }, [status.visible, status.type, clearStatus]);
 
   // -----------------------------------------------------------------------
-  // Auto-save draft settings on every form change (debounced)
-  // -----------------------------------------------------------------------
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      browser.storage.local.set({
-        draft_url: config.url,
-        draft_user: config.username,
-        draft_pass: config.password,
-      }).catch(() => {});
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [config.url, config.username, config.password]);
-
-  // -----------------------------------------------------------------------
   // Actions
   // -----------------------------------------------------------------------
 
-  const doRefreshLinks = useCallback(async (cfg: WebDAVConfig) => {
-    if (!cfg.url) return;
+  const doRefreshLinks = useCallback(async (cfg: NextcloudConfigState) => {
     setLoading(true);
     try {
       const client = getClient(cfg);
@@ -258,15 +269,15 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   }, [links.length, showStatus]);
 
   const refreshLinks = useCallback(async () => {
-    await doRefreshLinks(config);
-  }, [config, doRefreshLinks]);
+    await doRefreshLinks(configRef.current);
+  }, [doRefreshLinks]);
 
   const testConnection = useCallback(async () => {
     if (!isUrlValid) return;
     setTestingConnection(true);
     showStatus("Testing connection...", "info");
     try {
-      const client = getClient(config);
+      const client = getClient(configRef.current);
       const result = await client.verifyConnection();
       if (result.ok) {
         showStatus("Connection successful!", "success");
@@ -281,65 +292,130 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     } finally {
       setTestingConnection(false);
     }
-  }, [config, isUrlValid, showStatus]);
+  }, [isUrlValid, showStatus]);
 
-  const saveSettings = useCallback(async () => {
-    setLoading(true);
-    try {
-      await browser.storage.local.set({
-        webdav_url: config.url,
-        webdav_user: config.username,
-        webdav_pass: config.password,
-      });
+  // -----------------------------------------------------------------------
+  // Nextcloud login flow (runs in the background service worker)
+  // -----------------------------------------------------------------------
 
-      if (config.url) {
-        const client = getClient(config);
-        const store = await client.fetchLinks();
-        setLinks(store.links);
-        await browser.storage.local.set({ links_cache: store.links });
+  useEffect(() => {
+    function onMessage(message: unknown) {
+      const msg = message as {
+        type?: string;
+        phase?: LoginStatus;
+        result?: { server: string; loginName: string; appPassword: string; uid: string };
+        error?: string;
+      };
+      if (msg.type === "LOGIN_FLOW_PROGRESS" && msg.phase) {
+        setLoginStatus(msg.phase);
+      }
+      if (msg.type === "LOGIN_FLOW_RESULT" && msg.result) {
+        const loaded: NextcloudConfigState = {
+          server: normalizeInstance(msg.result.server),
+          username: msg.result.loginName,
+          appPassword: msg.result.appPassword,
+          uid: msg.result.uid,
+          basePath: configRef.current.basePath || "/",
+        };
+        setConfig(loaded);
         setIsConfigured(true);
-      } else {
-        setLinks([]);
-        await browser.storage.local.set({ links_cache: [] });
-        setIsConfigured(false);
+        setLoginStatus("idle");
+        showStatus("Connected to Nextcloud!", "success");
+        doRefreshLinks(loaded);
+      }
+      if (msg.type === "LOGIN_FLOW_ERROR") {
+        setLoginStatus("idle");
+        showStatus(msg.error || "Login failed.", "error");
+      }
+    }
+
+    browser.runtime.onMessage.addListener(onMessage);
+    return () => browser.runtime.onMessage.removeListener(onMessage);
+  }, [doRefreshLinks, showStatus]);
+
+  const connectToNextcloud = useCallback(
+    async (instance: string, basePath: string) => {
+      const server = normalizeInstance(instance);
+      const rawPath = basePath.trim();
+      if (!server) {
+        showStatus("Enter your Nextcloud instance first.", "error");
+        return;
+      }
+      if (!rawPath) {
+        showStatus("Enter a folder — use / for the root.", "error");
+        return;
       }
 
-      setShowSettings(false);
-      showStatus("Settings saved!", "success");
-      // Drafts no longer needed – committed config is authoritative
-      await browser.storage.local.remove(["draft_url", "draft_user", "draft_pass"]);
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Save failed.";
-      showStatus(message, "error");
+      const normalizedPath = normalizeBasePath(rawPath);
+      setConfig((prev) => ({ ...prev, server, basePath: normalizedPath }));
+      await browser.storage.local.set({ nc_basepath: normalizedPath });
+
+      setLoginStatus("connecting");
+      try {
+        await browser.runtime.sendMessage({
+          type: "START_LOGIN_FLOW",
+          instance: server,
+        });
+      } catch (err: unknown) {
+        setLoginStatus("idle");
+        const message =
+          err instanceof Error ? err.message : "Could not start login flow.";
+        showStatus(message, "error");
+      }
+    },
+    [showStatus],
+  );
+
+  const disconnect = useCallback(async () => {
+    await browser.storage.local.remove([
+      "nc_server",
+      "nc_username",
+      "nc_apppw",
+      "nc_uid",
+      "links_cache",
+    ]);
+    setConfig(EMPTY_CONFIG);
+    setIsConfigured(false);
+    setLinks([]);
+    setShowSettings(true);
+    showStatus("Disconnected from Nextcloud.", "info");
+  }, [showStatus]);
+
+  const setBasePath = useCallback(async (path: string) => {
+    const basePath = normalizeBasePath(path);
+    const updated = { ...configRef.current, basePath };
+    setConfig(updated);
+    await browser.storage.local.set({ nc_basepath: basePath });
+    if (updated.server && updated.uid) {
+      await doRefreshLinks(updated);
     }
-  }, [config, showStatus]);
+  }, [doRefreshLinks]);
 
   const saveCurrentLink = useCallback(async () => {
     if (!currentTab.url || !currentTab.title || isAlreadySavedAndUnread) return;
     showStatus("Saving...", "info");
     try {
-      const client = getClient(config);
+      const client = getClient(configRef.current);
       await client.addLink({
         url: currentTab.url,
         title: currentTab.title,
         tags: [],
       });
       showStatus("Saved!", "success");
-      await doRefreshLinks(config);
+      await doRefreshLinks(configRef.current);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Save failed.";
       showStatus(message, "error");
     }
-  }, [config, currentTab, isAlreadySavedAndUnread, doRefreshLinks, showStatus]);
+  }, [currentTab, isAlreadySavedAndUnread, doRefreshLinks, showStatus]);
 
   const handleToggleRead = useCallback(
     async (id: string, _isRead: boolean) => {
       try {
-        const client = getClient(config);
+        const client = getClient(configRef.current);
         await client.updateLink(id, { isRead: !_isRead });
-        await doRefreshLinks(config);
+        await doRefreshLinks(configRef.current);
       } catch (err: unknown) {
         const message =
           err instanceof Error ? err.message : "Update failed.";
@@ -347,16 +423,16 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
         showStatus(message, "error");
       }
     },
-    [config, doRefreshLinks, showStatus],
+    [doRefreshLinks, showStatus],
   );
 
   const handleDeleteLink = useCallback(
     async (id: string) => {
       if (!confirm("Delete this link?")) return;
       try {
-        const client = getClient(config);
+        const client = getClient(configRef.current);
         await client.deleteLink(id);
-        await doRefreshLinks(config);
+        await doRefreshLinks(configRef.current);
       } catch (err: unknown) {
         const message =
           err instanceof Error ? err.message : "Delete failed.";
@@ -364,40 +440,40 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
         showStatus(message, "error");
       }
     },
-    [config, doRefreshLinks, showStatus],
+    [doRefreshLinks, showStatus],
   );
 
   const handleMarkAllRead = useCallback(async () => {
     if (!confirm("Mark all links as read?")) return;
     showStatus("Updating...", "info");
     try {
-      const client = getClient(config);
+      const client = getClient(configRef.current);
       await client.markAllAsRead();
       showStatus("All marked as read!", "success");
-      await doRefreshLinks(config);
+      await doRefreshLinks(configRef.current);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to update.";
       console.error("ReadLater: handleMarkAllRead error", err);
       showStatus(message, "error");
     }
-  }, [config, doRefreshLinks, showStatus]);
+  }, [doRefreshLinks, showStatus]);
 
   const handleDeleteAll = useCallback(async () => {
     if (!confirm("DANGER: Delete ALL links permanently?")) return;
     showStatus("Deleting everything...", "info");
     try {
-      const client = getClient(config);
+      const client = getClient(configRef.current);
       await client.deleteAllLinks();
       showStatus("All links deleted.", "success");
-      await doRefreshLinks(config);
+      await doRefreshLinks(configRef.current);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Deletion failed.";
       console.error("ReadLater: handleDeleteAll error", err);
       showStatus(message, "error");
     }
-  }, [config, doRefreshLinks, showStatus]);
+  }, [doRefreshLinks, showStatus]);
 
   // -----------------------------------------------------------------------
   // Context value
@@ -406,7 +482,6 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   const value = useMemo<ReadLaterContextValue>(
     () => ({
       config,
-      updateConfig,
       isConfigured,
       links,
       loading,
@@ -428,9 +503,12 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       isUrlValid,
       isAlreadySavedAndUnread,
       hasUnread,
+      loginStatus,
+      connectToNextcloud,
+      disconnect,
+      setBasePath,
       refreshLinks,
       testConnection,
-      saveSettings,
       saveCurrentLink,
       handleToggleRead,
       handleDeleteLink,
@@ -439,7 +517,6 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     }),
     [
       config,
-      updateConfig,
       isConfigured,
       links,
       loading,
@@ -451,16 +528,17 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       filter,
       sortBy,
       searchQuery,
-      setSearchQuery,
       theme,
-      setTheme,
       currentTab,
       isUrlValid,
       isAlreadySavedAndUnread,
       hasUnread,
+      loginStatus,
+      connectToNextcloud,
+      disconnect,
+      setBasePath,
       refreshLinks,
       testConnection,
-      saveSettings,
       saveCurrentLink,
       handleToggleRead,
       handleDeleteLink,
