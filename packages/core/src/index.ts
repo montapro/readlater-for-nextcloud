@@ -39,6 +39,9 @@ interface FetchResult {
 
 // --- Client Implementation ---
 
+export const FOLDER_MISSING_MESSAGE =
+  "The folder you set must already exist on your Nextcloud filesystem.";
+
 export class ReadLaterClient {
   private client: WebDAVClient;
   private readonly config: WebDAVConfig;
@@ -82,6 +85,14 @@ export class ReadLaterClient {
       if (err?.status === 412 || err?.response?.status === 412) {
         return { ok: false, error: "Conflict: the file was modified by another client" };
       }
+      if (
+        err?.status === 404 ||
+        err?.response?.status === 404 ||
+        err?.status === 409 ||
+        err?.response?.status === 409
+      ) {
+        return { ok: false, error: FOLDER_MISSING_MESSAGE };
+      }
       const message = err?.message || err?.statusText || "Unknown error";
       console.error("ReadLater: Connection check failed", err);
       return { ok: false, error: message };
@@ -94,7 +105,7 @@ export class ReadLaterClient {
         await this.client.createDirectory(this.storagePath);
       }
     } catch (_error) {
-      throw new Error("Could not initialize storage directory on WebDAV.");
+      throw new Error(FOLDER_MISSING_MESSAGE);
     }
   }
 
