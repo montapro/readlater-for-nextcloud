@@ -9,7 +9,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "package:extension": "pnpm build && pnpm package:extension:dist && pnpm package:extension:source",
     "package:extension:dist": "cd apps/extension && node package.mjs",
-    "package:extension:source": "rm -f readlater-source.zip && zip -qr readlater-source.zip . -x \"**/node_modules/*\" \"**/dist/*\" \"**/.git/*\" \"**/.turbo/*\" \"*.zip\""
+    "package:extension:source": "rm -f readlater-source.zip && git archive --format=zip -o readlater-source.zip HEAD"
   },
   "devDependencies": {
     "turbo": "latest",
