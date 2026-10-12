@@ -105,12 +105,21 @@ After building, the extension output is in `apps/extension/dist/`. Load it as an
 
 ---
 
-## WebDAV Setup
+## Nextcloud Setup
 
-1. Open the extension popup and enter your **WebDAV URL** (e.g. `https://cloud.example.com/remote.php/dav/files/username/`).
-2. Enter your **username** and an **app password** (or use browser session auth by leaving credentials empty).
-3. Click **Test Connection** to verify.
-4. Click **Save**. The form **auto-saves drafts** — you can safely switch windows to copy credentials from your password manager.
+Both the browser extension and the mobile app connect through the
+**Nextcloud Login Flow v2** — no WebDAV URL or app password is entered by hand.
+
+1. Enter your **Nextcloud instance** (e.g. `cloud.example.com`).
+2. Enter the **storage folder** where ReadLater keeps its data (e.g. `AppSync`,
+   or `/` for the root). The folder must already exist in your Nextcloud files.
+3. Start the connection (**Connect to Nextcloud**). A browser opens where you
+   sign in — including two-factor authentication — and grant access.
+4. Access is granted through a generated **app password**. ReadLater stores only
+   the server, login name, app password and user id; the password can be revoked
+   any time under *Nextcloud → Settings → Security → App passwords*.
+
+ReadLater writes its data (`links.json` and favicons) to `<folder>/ReadLater/`.
 
 ---
 
