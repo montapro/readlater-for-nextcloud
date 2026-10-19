@@ -56,6 +56,7 @@ interface ReadLaterContextValue {
   links: Link[];
   loading: boolean;
   testingConnection: boolean;
+  fetchProgress: { done: number; total: number } | null;
   isUrlValid: boolean;
   showSettings: boolean;
   setShowSettings: (show: boolean) => void;
@@ -78,7 +79,12 @@ interface ReadLaterContextValue {
   setBasePath: (path: string) => Promise<void>;
   refreshLinks: () => Promise<void>;
   testConnection: () => Promise<void>;
-  handleToggleRead: (id: string, isRead: boolean) => Promise<boolean>;
+  handleFetchUnreadMetadata: () => Promise<void>;
+  handleToggleRead: (
+    id: string,
+    isRead: boolean,
+    options?: { confirm?: boolean }
+  ) => Promise<boolean>;
   handleDeleteLink: (
     id: string,
     options?: { confirm?: boolean }
@@ -161,6 +167,10 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   const [links, setLinks] = useState<Link[]>([]);
   const [loading, setLoading] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
+  const [fetchProgress, setFetchProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [filter, setFilter] = useState<FilterType>("unread");
   const [sortBy, setSortBy] = useState<SortType>("newest");
@@ -178,6 +188,9 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
 
   const configRef = useRef(config);
   configRef.current = config;
+
+  const linksRef = useRef(links);
+  linksRef.current = links;
 
   const isUrlValid = useMemo(
     () => normalizeInstance(config.server).startsWith("https://"),
@@ -422,17 +435,79 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     [doRefreshLinks],
   );
 
-  const handleToggleRead = useCallback(
-    async (id: string, isRead: boolean): Promise<boolean> => {
+  const handleFetchUnreadMetadata = useCallback(async () => {
+    const cfg = configRef.current;
+    const unread = linksRef.current.filter((link) => !link.isRead);
+    if (unread.length === 0) {
+      showStatus("No unread links to fetch.", "info");
+      return;
+    }
+
+    setFetchProgress({ done: 0, total: unread.length });
+    const client = getClient(cfg);
+    let updated = 0;
+
+    for (let i = 0; i < unread.length; i++) {
+      const link = unread[i];
       try {
-        const client = getClient(configRef.current);
-        await client.updateLink(id, { isRead: !isRead });
-        await doRefreshLinks(configRef.current);
-        return true;
+        const meta = await fetchPageMetadata(link.url);
+        const updates: Partial<Link> = {};
+        if (meta.title) updates.title = meta.title;
+        if (meta.faviconUrl) updates.faviconUrl = meta.faviconUrl;
+        if (meta.faviconData) {
+          const iconPath = await client.saveIcon(link.id, meta.faviconData);
+          if (iconPath) updates.faviconPath = iconPath;
+        }
+        if (Object.keys(updates).length > 0) {
+          await client.updateLink(link.id, updates);
+          updated += 1;
+        }
       } catch (_err) {
-        showStatus("Failed to update link.", "error");
-        return false;
+        // Skip links whose metadata could not be fetched
       }
+      setFetchProgress({ done: i + 1, total: unread.length });
+    }
+
+    await doRefreshLinks(cfg);
+    setFetchProgress(null);
+    showStatus(
+      `Updated ${updated} of ${unread.length} unread links.`,
+      "success"
+    );
+  }, [doRefreshLinks, showStatus]);
+
+  const handleToggleRead = useCallback(
+    (
+      id: string,
+      isRead: boolean,
+      options?: { confirm?: boolean }
+    ): Promise<boolean> => {
+      const performToggle = async (): Promise<boolean> => {
+        try {
+          const client = getClient(configRef.current);
+          await client.updateLink(id, { isRead: !isRead });
+          await doRefreshLinks(configRef.current);
+          return true;
+        } catch (_err) {
+          showStatus("Failed to update link.", "error");
+          return false;
+        }
+      };
+
+      // Confirm when marking a link as read, mirroring the delete flow.
+      const shouldConfirm = options?.confirm !== false && !isRead;
+      if (!shouldConfirm) {
+        return performToggle();
+      }
+      return new Promise((resolve) => {
+        Alert.alert("Mark as read", "Mark this link as read?", [
+          { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+          {
+            text: "Mark as read",
+            onPress: async () => resolve(await performToggle()),
+          },
+        ]);
+      });
     },
     [doRefreshLinks, showStatus]
   );
@@ -688,6 +763,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       links,
       loading,
       testingConnection,
+      fetchProgress,
       isUrlValid,
       showSettings,
       setShowSettings,
@@ -710,6 +786,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       setBasePath: setBasePathCallback,
       refreshLinks,
       testConnection,
+      handleFetchUnreadMetadata,
       handleToggleRead,
       handleDeleteLink,
       handleUpdateLink,
@@ -726,6 +803,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       links,
       loading,
       testingConnection,
+      fetchProgress,
       isUrlValid,
       showSettings,
       filter,
@@ -742,6 +820,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       setBasePathCallback,
       refreshLinks,
       testConnection,
+      handleFetchUnreadMetadata,
       handleToggleRead,
       handleDeleteLink,
       handleUpdateLink,

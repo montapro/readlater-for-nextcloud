@@ -11,7 +11,7 @@ import { useReadLater } from "../context/ReadLaterContext";
 import { useTheme } from "../hooks/useTheme";
 import type { ThemeType } from "../types";
 import { normalizeBasePath } from "../utils/loginFlow";
-import { Cloud, FolderTree, Wifi, LogOut, Save } from "lucide-react-native";
+import { Cloud, FolderTree, Wifi, LogOut, Save, Download } from "lucide-react-native";
 
 const THEME_OPTIONS: { value: ThemeType; label: string }[] = [
   { value: "system", label: "System" },
@@ -29,6 +29,8 @@ export function SettingsPanel() {
     setBasePath,
     testConnection,
     testingConnection,
+    fetchProgress,
+    handleFetchUnreadMetadata,
     isUrlValid,
     theme,
     setTheme,
@@ -50,6 +52,7 @@ export function SettingsPanel() {
   }, [config.basePath]);
 
   const connecting = loginStatus !== "idle";
+  const fetching = fetchProgress !== null;
   const canConnect =
     !connecting && instance.trim().length > 0 && basePathInput.trim().length > 0;
   const isPathDirty =
@@ -152,10 +155,11 @@ export function SettingsPanel() {
               style={[
                 styles.testButton,
                 { borderColor: colors.border },
-                (testingConnection || loading || !isUrlValid) && styles.disabled,
+                (testingConnection || loading || fetching || !isUrlValid) &&
+                  styles.disabled,
               ]}
               onPress={testConnection}
-              disabled={testingConnection || loading || !isUrlValid}
+              disabled={testingConnection || loading || fetching || !isUrlValid}
             >
               <Wifi color={colors.primary} size={18} />
               <Text style={[styles.testText, { color: colors.primary }]}>
@@ -165,19 +169,39 @@ export function SettingsPanel() {
 
             <TouchableOpacity
               style={[
-                styles.saveButton,
-                { backgroundColor: colors.primary },
-                (!isPathDirty || loading) && styles.disabled,
+                styles.testButton,
+                { borderColor: colors.border },
+                (fetching || loading || testingConnection) && styles.disabled,
               ]}
-              onPress={handleSavePath}
-              disabled={!isPathDirty || loading}
+              onPress={handleFetchUnreadMetadata}
+              disabled={fetching || loading || testingConnection}
             >
-              <Save color="#fff" size={18} />
-              <Text style={styles.buttonText}>
-                {loading ? "Saving…" : "Save"}
+              <Download color={colors.primary} size={18} />
+              <Text
+                style={[styles.testText, { color: colors.primary }]}
+                numberOfLines={1}
+              >
+                {fetchProgress
+                  ? `${fetchProgress.done}/${fetchProgress.total}`
+                  : "Fetch"}
               </Text>
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            style={[
+              styles.saveButtonFull,
+              { backgroundColor: colors.primary },
+              (!isPathDirty || loading || fetching) && styles.disabled,
+            ]}
+            onPress={handleSavePath}
+            disabled={!isPathDirty || loading || fetching}
+          >
+            <Save color="#fff" size={18} />
+            <Text style={styles.buttonText}>
+              {loading ? "Saving…" : "Save"}
+            </Text>
+          </TouchableOpacity>
         </>
       ) : (
         <>
@@ -383,14 +407,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 14,
   },
-  saveButton: {
-    flex: 2,
+  saveButtonFull: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     padding: 14,
     borderRadius: 8,
     gap: 6,
+    marginTop: 10,
   },
   buttonText: {
     color: "#fff",

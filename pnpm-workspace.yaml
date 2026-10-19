@@ -1,5 +1,3 @@
 packages:
   - 'apps/*'
   - 'packages/*'
-patchedDependencies:
-  '@expo/cli@58.0.5': patches/@expo__cli@58.0.5.patch

@@ -8,15 +8,11 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.markuskrause.readlater",
-      "appleTeamId": "2PRVQLQ4G7"
+      "appleTeamId": "2PRVQLQ4G7",
+      "icon": "./assets/AppIcon.icon"
     },
     "android": {
       "adaptiveIcon": {
@@ -42,7 +38,21 @@
       ],
       "./plugins/withRemoveApsEntitlement",
       "./plugins/withDisableUserScriptSandboxing",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-status-bar",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-logo.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#2563eb",
+          "dark": {
+            "image": "./assets/splash-logo.png",
+            "backgroundColor": "#0f172a"
+          }
+        }
+      ]
     ]
   }
 }

@@ -77,15 +77,19 @@ export function SwipeableRow({
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const stays = staysVisibleOnRight;
-    const result = onSwipeRight();
-    if (stays) {
-      swipeableRef.current?.close();
-    } else {
-      runExit("right");
-    }
-    result
+    // Mirror the delete flow: only animate the row away once the action has
+    // actually been confirmed (e.g. the "mark as read" dialog).
+    onSwipeRight()
       .then((ok) => {
-        if (!ok) restore();
+        if (!ok) {
+          restore();
+          return;
+        }
+        if (stays) {
+          swipeableRef.current?.close();
+        } else {
+          runExit("right");
+        }
       })
       .catch(() => restore());
   };
