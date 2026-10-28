@@ -367,11 +367,25 @@ export class ReadLaterClient {
    * Marks the given links as read in one read-modify-write cycle.
    */
   async markAsRead(ids: string[]): Promise<void> {
+    await this.setReadState(ids, true);
+  }
+
+  /**
+   * Marks the given links as unread in one read-modify-write cycle.
+   */
+  async markAsUnread(ids: string[]): Promise<void> {
+    await this.setReadState(ids, false);
+  }
+
+  /**
+   * Internal: flips the read flag of the given links with one write.
+   */
+  private async setReadState(ids: string[], isRead: boolean): Promise<void> {
     if (ids.length === 0) return;
     const idSet = new Set(ids);
     await this.withRetry((store) => {
       store.links = store.links.map((l) =>
-        idSet.has(l.id) ? { ...l, isRead: true } : l
+        idSet.has(l.id) ? { ...l, isRead } : l
       );
     });
   }

@@ -515,6 +515,41 @@ describe("ReadLaterClient", () => {
     });
   });
 
+  // -- markAsUnread --
+
+  describe("markAsUnread", () => {
+    const readLink = sampleLink({
+      id: "550e8400-e29b-41d4-a716-446655440030",
+      url: "https://example.com/a",
+      isRead: true,
+    });
+    const untouched = sampleLink({
+      id: "550e8400-e29b-41d4-a716-446655440031",
+      url: "https://example.com/b",
+      isRead: true,
+    });
+
+    beforeEach(() => {
+      mockStore([readLink, untouched]);
+    });
+
+    it("marks only the given links as unread", async () => {
+      await client.markAsUnread([readLink.id]);
+
+      const saved = JSON.parse(
+        mockClient.putFileContents.mock.calls[0][1] as string
+      ) as LinkStore;
+      expect(saved.links.find((l) => l.id === readLink.id)?.isRead).toBe(false);
+      expect(saved.links.find((l) => l.id === untouched.id)?.isRead).toBe(true);
+    });
+
+    it("does no round trip for an empty selection", async () => {
+      await client.markAsUnread([]);
+
+      expect(mockClient.putFileContents).not.toHaveBeenCalled();
+    });
+  });
+
   // -- markAllAsRead --
 
   describe("markAllAsRead", () => {
