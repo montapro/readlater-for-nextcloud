@@ -82,8 +82,9 @@ readlater-for-nextcloud/
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) v18 or higher
-- [pnpm](https://pnpm.io/installation) v8 or higher
+- [Node.js](https://nodejs.org/) 20 or newer (tested with Node 24)
+- [pnpm](https://pnpm.io/installation) 10.33.0 — simplest via `corepack enable`
+  (the exact version is pinned in `package.json#packageManager`)
 
 ### Install
 
@@ -93,13 +94,43 @@ cd readlater-for-nextcloud
 pnpm install
 ```
 
+### Building from source (add-on reviewers)
+
+1. Install Node.js 20+ and enable pnpm:
+   ```bash
+   corepack enable
+   pnpm --version   # should report 10.33.0
+   ```
+2. Install dependencies (only step that needs network access):
+   ```bash
+   pnpm install --frozen-lockfile
+   ```
+3. Build the shared library and the extension:
+   ```bash
+   pnpm build
+   ```
+   This runs `tsc` for `packages/core` and `vite build` for `apps/extension`.
+4. The unpacked add-on is the contents of **`apps/extension/dist/`**
+   (`manifest.json`, `background.js`, `index.html`, `assets/`, icons).
+   The same folder is zipped into `readlater-firefox.zip` / `readlater-chrome.zip`
+   by `pnpm package:extension:dist`.
+5. Optional sanity checks:
+   ```bash
+   pnpm lint    # ESLint
+   pnpm test    # core unit tests (vitest)
+   ```
+
+Build environment used for the submitted build: macOS (arm64), Node 24.11.1,
+pnpm 10.33.0. No code generation from remote sources, no environment-specific
+secrets — the output is deterministic from the sources in this archive.
+
 ### Commands
 
 ```bash
 pnpm dev           # All apps in development mode
 pnpm build         # Build core library + extension
 pnpm lint          # ESLint across all packages
-pnpm test          # Run 31 core unit tests
+pnpm test          # Run core unit tests (vitest)
 pnpm format        # Prettier across all TypeScript/CSS files
 ```
 
