@@ -82,7 +82,9 @@ interface ReadLaterContextValue {
   toggleSelectAllVisible: () => void;
   clearSelection: () => void;
   openSelected: () => Promise<void>;
+  selectedAllRead: boolean;
   markSelectedRead: () => Promise<void>;
+  markSelectedUnread: () => Promise<void>;
   deleteSelected: () => Promise<void>;
   openLink: (url: string) => Promise<void>;
   pendingConfirm: PendingConfirm | null;
@@ -227,6 +229,8 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     [visibleLinks, selectedIds]
   );
   const selectedCount = selectedLinks.length;
+  const selectedAllRead =
+    selectedLinks.length > 0 && selectedLinks.every((l) => l.isRead);
 
   // -----------------------------------------------------------------------
   // Status helpers
@@ -294,7 +298,10 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
         ]);
 
         if (stored.links_cache) setLinks(stored.links_cache as Link[]);
-        if (stored.pref_filter) setFilter(stored.pref_filter as FilterType);
+        // "all" was removed as a filter – fall back to unread for old prefs.
+        if (stored.pref_filter === "read" || stored.pref_filter === "unread") {
+          setFilter(stored.pref_filter as FilterType);
+        }
         if (stored.pref_sortBy) setSortBy(stored.pref_sortBy as SortType);
         if (stored.nc_login_status) {
           setLoginStatus(stored.nc_login_status as LoginStatus);
@@ -734,6 +741,30 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     }
   }, [selectedLinks, clearSelection, doRefreshLinks, showStatus]);
 
+  const markSelectedUnread = useCallback(async () => {
+    const targets = selectedLinks;
+    if (targets.length === 0) return;
+
+    showStatus("Updating...", "info");
+    try {
+      const client = getClient(configRef.current);
+      await client.markAsUnread(targets.map((l) => l.id));
+      clearSelection();
+      showStatus(
+        `Marked ${targets.length} ${
+          targets.length === 1 ? "link" : "links"
+        } as unread.`,
+        "success"
+      );
+      await doRefreshLinks(configRef.current);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to update.";
+      console.error("ReadLater: markSelectedUnread error", err);
+      showStatus(message, "error");
+    }
+  }, [selectedLinks, clearSelection, doRefreshLinks, showStatus]);
+
   const deleteSelected = useCallback(async () => {
     const targets = selectedLinks;
     if (targets.length === 0) return;
@@ -807,7 +838,9 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       toggleSelectAllVisible,
       clearSelection,
       openSelected,
+      selectedAllRead,
       markSelectedRead,
+      markSelectedUnread,
       deleteSelected,
       openLink,
       pendingConfirm,
@@ -849,7 +882,9 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       toggleSelectAllVisible,
       clearSelection,
       openSelected,
+      selectedAllRead,
       markSelectedRead,
+      markSelectedUnread,
       deleteSelected,
       openLink,
       pendingConfirm,

@@ -61,9 +61,9 @@ export function LinkList() {
         <div className="py-16 text-center space-y-3">
           <Link2 className="w-10 h-10 text-muted-foreground/30 mx-auto" />
           <p className="text-muted-foreground text-xs italic">
-            {filter === "all"
-              ? "No links saved yet. Save a link to get started!"
-              : "No matching links found"}
+            {filter === "unread"
+              ? "No unread links – you're all caught up."
+              : "No read links yet."}
           </p>
         </div>
       ) : (

@@ -49,7 +49,7 @@ readlater-for-nextcloud/
 - 100 % open source — no third-party accounts, no tracking
 - Data stored as `links.json` in a `/ReadLater` directory on your WebDAV server
 - Dark mode with system preference detection
-- Filter links by status (unread / read / all)
+- Filter links by status (unread / read); the mobile app also has an "all" view
 - Sort by newest, oldest, or alphabetically
 - Tags and description display on link cards
 - Mark all as read / delete all batch operations
