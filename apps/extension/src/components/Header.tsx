@@ -31,7 +31,7 @@ export function Header() {
             <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
           </svg>
         </div>
-        <h1 className="font-bold text-lg tracking-tight text-slate-800 dark:text-slate-100">
+        <h1 className="font-bold text-lg tracking-tight text-slate-800 dark:text-white">
           ReadLater
         </h1>
       </div>
