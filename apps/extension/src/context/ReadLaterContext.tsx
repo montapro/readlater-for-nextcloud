@@ -32,10 +32,18 @@ export interface NextcloudConfigState {
 
 export type LoginStatus = "idle" | "connecting" | "waiting" | "finishing";
 
+export interface PendingConfirm {
+  message: string;
+  confirmLabel: string;
+  destructive: boolean;
+}
+
 interface ReadLaterContextValue {
   config: NextcloudConfigState;
   isConfigured: boolean;
   links: Link[];
+  /** Links after filter, search and sort – exactly what the list renders. */
+  visibleLinks: Link[];
   loading: boolean;
   testingConnection: boolean;
   status: StatusMessage;
@@ -54,7 +62,6 @@ interface ReadLaterContextValue {
   currentTab: { url?: string; title?: string };
   isUrlValid: boolean;
   isAlreadySavedAndUnread: boolean;
-  hasUnread: boolean;
   loginStatus: LoginStatus;
   connectToNextcloud: (instance: string, basePath: string) => Promise<void>;
   disconnect: () => Promise<void>;
@@ -62,10 +69,24 @@ interface ReadLaterContextValue {
   refreshLinks: () => Promise<void>;
   testConnection: () => Promise<void>;
   saveCurrentLink: () => Promise<void>;
+  saveTabsOrCurrent: () => Promise<void>;
+  /** Number of saveable highlighted tabs; badge is shown when >= 2. */
+  highlightedTabCount: number;
+  savingTabs: boolean;
   handleToggleRead: (id: string, isRead: boolean) => Promise<void>;
   handleDeleteLink: (id: string) => Promise<void>;
-  handleMarkAllRead: () => Promise<void>;
-  handleDeleteAll: () => Promise<void>;
+  /** IDs of the currently selected (visible) links. */
+  selectedIds: Set<string>;
+  selectedCount: number;
+  toggleSelected: (id: string) => void;
+  toggleSelectAllVisible: () => void;
+  clearSelection: () => void;
+  openSelected: () => Promise<void>;
+  markSelectedRead: () => Promise<void>;
+  deleteSelected: () => Promise<void>;
+  openLink: (url: string) => Promise<void>;
+  pendingConfirm: PendingConfirm | null;
+  resolveConfirm: (accepted: boolean) => void;
 }
 
 const ReadLaterContext = createContext<ReadLaterContextValue | null>(null);
@@ -94,6 +115,35 @@ function getClient(config: NextcloudConfigState): ReadLaterClient {
   return new ReadLaterClient(toWebDavConfig(config));
 }
 
+interface TabToSave {
+  url: string;
+  title: string;
+  tags: string[];
+}
+
+/**
+ * Highlighted tabs of the current window that can actually be saved:
+ * http(s) only and collapsed to unique URLs, so the badge count always
+ * matches what the save action would process.
+ */
+async function collectHighlightedTabs(): Promise<TabToSave[]> {
+  const tabs = await browser.tabs.query({
+    currentWindow: true,
+    highlighted: true,
+  });
+
+  const seen = new Set<string>();
+  const items: TabToSave[] = [];
+  for (const tab of tabs) {
+    const url = tab.url;
+    if (!url || !/^https?:\/\//i.test(url)) continue;
+    if (seen.has(url)) continue;
+    seen.add(url);
+    items.push({ url, title: tab.title || url, tags: [] });
+  }
+  return items;
+}
+
 export function ReadLaterProvider({ children }: { children: ReactNode }) {
   // --- Config state ---
   const [config, setConfig] = useState<NextcloudConfigState>(EMPTY_CONFIG);
@@ -104,6 +154,8 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   const [links, setLinks] = useState<Link[]>([]);
   const [loading, setLoading] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
+  const [savingTabs, setSavingTabs] = useState(false);
+  const [highlightedTabCount, setHighlightedTabCount] = useState(0);
 
   const [status, setStatus] = useState<StatusMessage>({
     text: "",
@@ -113,6 +165,13 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
 
   // --- UI state ---
   const [showSettings, setShowSettings] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(
+    () => new Set<string>()
+  );
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(
+    null
+  );
+  const confirmResolver = useRef<((accepted: boolean) => void) | null>(null);
   const [filter, setFilter] = useState<FilterType>("unread");
   const [sortBy, setSortBy] = useState<SortType>("newest");
   const [searchQuery, setSearchQuery] = useState("");
@@ -139,7 +198,35 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     [links, currentTab.url],
   );
 
-  const hasUnread = useMemo(() => links.some((l) => !l.isRead), [links]);
+  const visibleLinks = useMemo(() => {
+    let result = [...links];
+    if (filter === "read") result = result.filter((l) => l.isRead);
+    if (filter === "unread") result = result.filter((l) => !l.isRead);
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter(
+        (l) =>
+          l.title.toLowerCase().includes(q) ||
+          l.url.toLowerCase().includes(q) ||
+          l.tags.some((t) => t.toLowerCase().includes(q))
+      );
+    }
+    result.sort((a, b) => {
+      if (sortBy === "newest")
+        return new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime();
+      if (sortBy === "oldest")
+        return new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime();
+      if (sortBy === "alpha") return a.title.localeCompare(b.title);
+      return 0;
+    });
+    return result;
+  }, [links, filter, sortBy, searchQuery]);
+
+  const selectedLinks = useMemo(
+    () => visibleLinks.filter((l) => selectedIds.has(l.id)),
+    [visibleLinks, selectedIds]
+  );
+  const selectedCount = selectedLinks.length;
 
   // -----------------------------------------------------------------------
   // Status helpers
@@ -155,6 +242,37 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     },
     [],
   );
+
+  // -----------------------------------------------------------------------
+  // Confirmation helper
+  //
+  // Native window.confirm() steals focus, which makes Chrome close the
+  // popup mid-action. The dialog lives in the popup instead.
+  // -----------------------------------------------------------------------
+
+  const askConfirm = useCallback(
+    (
+      message: string,
+      options?: { confirmLabel?: string; destructive?: boolean }
+    ) =>
+      new Promise<boolean>((resolve) => {
+        confirmResolver.current?.(false);
+        confirmResolver.current = resolve;
+        setPendingConfirm({
+          message,
+          confirmLabel: options?.confirmLabel ?? "Confirm",
+          destructive: options?.destructive ?? false,
+        });
+      }),
+    []
+  );
+
+  const resolveConfirm = useCallback((accepted: boolean) => {
+    const resolve = confirmResolver.current;
+    confirmResolver.current = null;
+    setPendingConfirm(null);
+    resolve?.(accepted);
+  }, []);
 
   // -----------------------------------------------------------------------
   // Initialization
@@ -221,6 +339,12 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       } catch (_err) {
         // Tab query may fail in some contexts (e.g. incognito)
       }
+
+      try {
+        setHighlightedTabCount((await collectHighlightedTabs()).length);
+      } catch (_err) {
+        // Highlight query may fail in some contexts (e.g. incognito)
+      }
     }
     init();
   }, []);
@@ -232,6 +356,29 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     browser.storage.local.set({ pref_filter: filter, pref_sortBy: sortBy });
   }, [filter, sortBy]);
+
+  // -----------------------------------------------------------------------
+  // Selection upkeep
+  // -----------------------------------------------------------------------
+
+  // Drop ids that no longer exist (deleted, or refreshed away by another client)
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const existing = new Set(links.map((l) => l.id));
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (existing.has(id)) next.add(id);
+      }
+      return next.size === prev.size ? prev : next;
+    });
+  }, [links]);
+
+  // Filter and search redefine "all visible" – acting on hidden selections
+  // would be surprising, so the selection is dropped.
+  useEffect(() => {
+    setSelectedIds((prev) => (prev.size === 0 ? prev : new Set<string>()));
+  }, [filter, searchQuery]);
 
   // -----------------------------------------------------------------------
   // Auto-dismiss status after 3s for non-error messages
@@ -410,6 +557,60 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     }
   }, [currentTab, isAlreadySavedAndUnread, doRefreshLinks, showStatus]);
 
+  const saveTabsOrCurrent = useCallback(async () => {
+    if (savingTabs) return;
+
+    let items: TabToSave[] = [];
+    try {
+      items = await collectHighlightedTabs();
+    } catch (err) {
+      console.error("ReadLater: could not read highlighted tabs", err);
+    }
+
+    // Nothing multi-selected (or nothing saveable): behave like before.
+    if (items.length < 2) {
+      await saveCurrentLink();
+      return;
+    }
+
+    const label = `${items.length} selected tabs`;
+    const accepted = await askConfirm(`Save ${label}?`, {
+      confirmLabel: "Save",
+    });
+    if (!accepted) return;
+
+    setSavingTabs(true);
+    try {
+      showStatus(`Saving ${label}…`, "info");
+      const client = getClient(configRef.current);
+      const result = await client.addLinks(items);
+
+      const saved = result.added.length + result.reactivated.length;
+      const skipped = result.skipped.length;
+      if (saved === 0) {
+        showStatus(`All ${label} already saved.`, "info");
+      } else if (skipped > 0) {
+        showStatus(
+          `Saved ${saved}, skipped ${skipped} already saved.`,
+          "success"
+        );
+      } else {
+        showStatus(
+          `Saved ${saved} ${saved === 1 ? "tab" : "tabs"}.`,
+          "success"
+        );
+      }
+      await doRefreshLinks(configRef.current);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Saving tabs failed.";
+      console.error("ReadLater: saveTabsOrCurrent error", err);
+      showStatus(message, "error");
+    } finally {
+      setSavingTabs(false);
+    }
+  }, [savingTabs, saveCurrentLink, askConfirm, doRefreshLinks, showStatus]);
+
   const handleToggleRead = useCallback(
     async (id: string, _isRead: boolean) => {
       try {
@@ -426,9 +627,31 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     [doRefreshLinks, showStatus],
   );
 
+  const openInBackgroundTab = useCallback(async (url: string) => {
+    try {
+      await browser.tabs.create({ url, active: false });
+      return true;
+    } catch (err) {
+      console.error("ReadLater: failed to open link", url, err);
+      return false;
+    }
+  }, []);
+
+  const openLink = useCallback(
+    async (url: string) => {
+      const ok = await openInBackgroundTab(url);
+      if (!ok) showStatus("Could not open link.", "error");
+    },
+    [openInBackgroundTab, showStatus]
+  );
+
   const handleDeleteLink = useCallback(
     async (id: string) => {
-      if (!confirm("Delete this link?")) return;
+      const accepted = await askConfirm("Delete this link?", {
+        confirmLabel: "Delete",
+        destructive: true,
+      });
+      if (!accepted) return;
       try {
         const client = getClient(configRef.current);
         await client.deleteLink(id);
@@ -440,40 +663,103 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
         showStatus(message, "error");
       }
     },
-    [doRefreshLinks, showStatus],
+    [askConfirm, doRefreshLinks, showStatus]
   );
 
-  const handleMarkAllRead = useCallback(async () => {
-    if (!confirm("Mark all links as read?")) return;
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set<string>());
+  }, []);
+
+  const toggleSelectAllVisible = useCallback(() => {
+    setSelectedIds((prev) => {
+      const allSelected =
+        visibleLinks.length > 0 &&
+        visibleLinks.every((l) => prev.has(l.id));
+      return allSelected
+        ? new Set<string>()
+        : new Set(visibleLinks.map((l) => l.id));
+    });
+  }, [visibleLinks]);
+
+  const openSelected = useCallback(async () => {
+    const targets = selectedLinks;
+    if (targets.length === 0) return;
+
+    let opened = 0;
+    for (const link of targets) {
+      if (await openInBackgroundTab(link.url)) opened += 1;
+    }
+
+    clearSelection();
+    if (opened === 0) {
+      showStatus("Could not open any links.", "error");
+      return;
+    }
+    showStatus(
+      `Opened ${opened} ${opened === 1 ? "link" : "links"}.`,
+      "success"
+    );
+  }, [selectedLinks, openInBackgroundTab, clearSelection, showStatus]);
+
+  const markSelectedRead = useCallback(async () => {
+    const targets = selectedLinks;
+    if (targets.length === 0) return;
+
     showStatus("Updating...", "info");
     try {
       const client = getClient(configRef.current);
-      await client.markAllAsRead();
-      showStatus("All marked as read!", "success");
+      await client.markAsRead(targets.map((l) => l.id));
+      clearSelection();
+      showStatus(
+        `Marked ${targets.length} ${
+          targets.length === 1 ? "link" : "links"
+        } as read.`,
+        "success"
+      );
       await doRefreshLinks(configRef.current);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to update.";
-      console.error("ReadLater: handleMarkAllRead error", err);
+      console.error("ReadLater: markSelectedRead error", err);
       showStatus(message, "error");
     }
-  }, [doRefreshLinks, showStatus]);
+  }, [selectedLinks, clearSelection, doRefreshLinks, showStatus]);
 
-  const handleDeleteAll = useCallback(async () => {
-    if (!confirm("DANGER: Delete ALL links permanently?")) return;
-    showStatus("Deleting everything...", "info");
+  const deleteSelected = useCallback(async () => {
+    const targets = selectedLinks;
+    if (targets.length === 0) return;
+
+    const label = `${targets.length} ${
+      targets.length === 1 ? "link" : "links"
+    }`;
+    const accepted = await askConfirm(`Delete ${label}?`, {
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!accepted) return;
+
     try {
       const client = getClient(configRef.current);
-      await client.deleteAllLinks();
-      showStatus("All links deleted.", "success");
+      await client.deleteLinks(targets.map((l) => l.id));
+      clearSelection();
+      showStatus(`Deleted ${label}.`, "success");
       await doRefreshLinks(configRef.current);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Deletion failed.";
-      console.error("ReadLater: handleDeleteAll error", err);
+      console.error("ReadLater: deleteSelected error", err);
       showStatus(message, "error");
     }
-  }, [doRefreshLinks, showStatus]);
+  }, [selectedLinks, askConfirm, clearSelection, doRefreshLinks, showStatus]);
 
   // -----------------------------------------------------------------------
   // Context value
@@ -484,6 +770,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       config,
       isConfigured,
       links,
+      visibleLinks,
       loading,
       testingConnection,
       status,
@@ -502,7 +789,6 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       currentTab,
       isUrlValid,
       isAlreadySavedAndUnread,
-      hasUnread,
       loginStatus,
       connectToNextcloud,
       disconnect,
@@ -510,15 +796,28 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       refreshLinks,
       testConnection,
       saveCurrentLink,
+      saveTabsOrCurrent,
+      highlightedTabCount,
+      savingTabs,
       handleToggleRead,
       handleDeleteLink,
-      handleMarkAllRead,
-      handleDeleteAll,
+      selectedIds,
+      selectedCount,
+      toggleSelected,
+      toggleSelectAllVisible,
+      clearSelection,
+      openSelected,
+      markSelectedRead,
+      deleteSelected,
+      openLink,
+      pendingConfirm,
+      resolveConfirm,
     }),
     [
       config,
       isConfigured,
       links,
+      visibleLinks,
       loading,
       testingConnection,
       status,
@@ -532,7 +831,6 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       currentTab,
       isUrlValid,
       isAlreadySavedAndUnread,
-      hasUnread,
       loginStatus,
       connectToNextcloud,
       disconnect,
@@ -540,10 +838,22 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       refreshLinks,
       testConnection,
       saveCurrentLink,
+      saveTabsOrCurrent,
+      highlightedTabCount,
+      savingTabs,
       handleToggleRead,
       handleDeleteLink,
-      handleMarkAllRead,
-      handleDeleteAll,
+      selectedIds,
+      selectedCount,
+      toggleSelected,
+      toggleSelectAllVisible,
+      clearSelection,
+      openSelected,
+      markSelectedRead,
+      deleteSelected,
+      openLink,
+      pendingConfirm,
+      resolveConfirm,
     ],
   );
 

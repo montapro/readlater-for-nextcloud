@@ -5,6 +5,7 @@ import { SettingsPanel } from "./components/SettingsPanel";
 import { FilterBar } from "./components/FilterBar";
 import { LinkList } from "./components/LinkList";
 import { StatusFooter } from "./components/StatusFooter";
+import { ConfirmDialog } from "./components/ConfirmDialog";
 import { useReadLater } from "./context/ReadLaterContext";
 
 /**
@@ -14,7 +15,7 @@ function AppContent() {
   const { showSettings } = useReadLater();
 
   return (
-    <div className="w-[500px] min-h-[500px] max-h-[600px] bg-background text-foreground antialiased flex flex-col overflow-x-hidden transition-colors duration-300">
+    <div className="relative w-[500px] min-h-[500px] max-h-[600px] bg-background text-foreground antialiased flex flex-col overflow-x-hidden transition-colors duration-300">
       <Header />
 
       <main className="flex-1 flex flex-col overflow-hidden bg-background">
@@ -22,6 +23,7 @@ function AppContent() {
       </main>
 
       <StatusFooter />
+      <ConfirmDialog />
     </div>
   );
 }

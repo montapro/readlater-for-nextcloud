@@ -9,10 +9,18 @@ export function Header() {
     refreshLinks,
     showSettings,
     setShowSettings,
-    saveCurrentLink,
+    saveTabsOrCurrent,
+    highlightedTabCount,
+    savingTabs,
     isAlreadySavedAndUnread,
     status,
   } = useReadLater();
+
+  const isMultiSave = highlightedTabCount >= 2;
+  const showSavedCheck = !isMultiSave && isAlreadySavedAndUnread;
+  const saveTitle = isMultiSave
+    ? `Save ${highlightedTabCount} selected tabs`
+    : "Save current tab";
 
   return (
     <header className="px-4 py-3 border-b flex items-center justify-between bg-card sticky top-0 z-10 shadow-sm border-border">
@@ -29,17 +37,31 @@ export function Header() {
       </div>
       <div className="flex items-center gap-1">
         <button
-          onClick={saveCurrentLink}
+          onClick={saveTabsOrCurrent}
           disabled={
-            (status.visible && status.type === "info") || loading || !isConfigured || isAlreadySavedAndUnread
+            (status.visible && status.type === "info") ||
+            loading ||
+            savingTabs ||
+            !isConfigured ||
+            showSavedCheck
           }
-          className="p-2 hover:bg-muted rounded-full transition-colors cursor-pointer disabled:cursor-default"
-          title="Save current tab"
+          className="relative p-2 hover:bg-muted rounded-full transition-colors cursor-pointer disabled:cursor-default"
+          title={saveTitle}
         >
-          {isAlreadySavedAndUnread ? (
+          {showSavedCheck ? (
             <CheckCircle2 className="w-4 h-4 text-green-500" />
           ) : (
-            <Save className="w-4 h-4 text-muted-foreground" />
+            <Save
+              className={`w-4 h-4 text-muted-foreground ${savingTabs ? "animate-pulse" : ""}`}
+            />
+          )}
+          {isMultiSave && (
+            <span
+              aria-hidden="true"
+              className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-1 rounded-full bg-primary text-primary-foreground text-[8px] font-bold leading-none flex items-center justify-center shadow-sm"
+            >
+              {highlightedTabCount > 99 ? "99+" : highlightedTabCount}
+            </span>
           )}
         </button>
         <button
