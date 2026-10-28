@@ -285,6 +285,86 @@ describe("ReadLaterClient", () => {
     });
   });
 
+  // -- addLinks --
+
+  describe("addLinks", () => {
+    const items = [
+      { url: "https://example.com/one", title: "One", tags: [] },
+      { url: "https://example.com/two", title: "Two", tags: [] },
+    ];
+
+    it("writes the store only once for many links", async () => {
+      mockStore([]);
+
+      const result = await client.addLinks(items);
+
+      expect(result.added).toHaveLength(2);
+      expect(mockClient.putFileContents).toHaveBeenCalledTimes(1);
+      expect(mockClient.getFileContents).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the batch order in the resulting list", async () => {
+      mockStore([]);
+
+      await client.addLinks(items);
+
+      const written = JSON.parse(
+        mockClient.putFileContents.mock.calls[0][1] as string
+      ) as LinkStore;
+      expect(written.links.map((l) => l.url)).toEqual([
+        items[0].url,
+        items[1].url,
+      ]);
+    });
+
+    it("skips links that are already saved and unread", async () => {
+      const existing = sampleLink({ url: items[0].url, isRead: false });
+      mockStore([existing]);
+
+      const result = await client.addLinks(items);
+
+      expect(result.added).toHaveLength(1);
+      expect(result.skipped).toHaveLength(1);
+      expect(result.skipped[0].id).toBe(existing.id);
+    });
+
+    it("reactivates read links with a fresh timestamp", async () => {
+      const readLink = sampleLink({
+        url: items[0].url,
+        isRead: true,
+        title: "Old Title",
+        addedAt: "2025-01-15T10:30:00.000Z",
+      });
+      mockStore([readLink]);
+
+      const result = await client.addLinks(items);
+
+      expect(result.reactivated).toHaveLength(1);
+      const reactivated = result.reactivated[0];
+      expect(reactivated.isRead).toBe(false);
+      expect(reactivated.title).toBe(items[0].title);
+      expect(reactivated.addedAt).not.toBe("2025-01-15T10:30:00.000Z");
+    });
+
+    it("collapses duplicate URLs inside the batch", async () => {
+      mockStore([]);
+
+      const result = await client.addLinks([items[0], items[0]]);
+
+      expect(result.added).toHaveLength(1);
+    });
+
+    it("does no round trip for an empty batch", async () => {
+      mockStore([]);
+
+      const result = await client.addLinks([]);
+
+      expect(result).toEqual({ added: [], reactivated: [], skipped: [] });
+      expect(mockClient.getFileContents).not.toHaveBeenCalled();
+      expect(mockClient.putFileContents).not.toHaveBeenCalled();
+    });
+  });
+
   // -- updateLink --
 
   describe("updateLink", () => {
@@ -350,6 +430,88 @@ describe("ReadLaterClient", () => {
     it("still resolves when icon deletion fails", async () => {
       mockClient.deleteFile.mockRejectedValue(new Error("network"));
       await expect(client.deleteLink(link.id)).resolves.toBeUndefined();
+    });
+  });
+
+  // -- deleteLinks --
+
+  describe("deleteLinks", () => {
+    const keep = sampleLink({
+      id: "550e8400-e29b-41d4-a716-446655440010",
+      url: "https://example.com/keep",
+    });
+    const removeA = sampleLink({
+      id: "550e8400-e29b-41d4-a716-446655440011",
+      url: "https://example.com/a",
+      faviconPath: "ReadLater/icons/550e8400-e29b-41d4-a716-446655440011.png",
+    });
+    const removeB = sampleLink({
+      id: "550e8400-e29b-41d4-a716-446655440012",
+      url: "https://example.com/b",
+    });
+
+    beforeEach(() => {
+      mockStore([keep, removeA, removeB]);
+    });
+
+    it("removes only the given links in one write", async () => {
+      await client.deleteLinks([removeA.id, removeB.id]);
+
+      const saved = JSON.parse(
+        mockClient.putFileContents.mock.calls[0][1] as string
+      ) as LinkStore;
+      expect(saved.links.map((l) => l.id)).toEqual([keep.id]);
+      expect(mockClient.putFileContents).toHaveBeenCalledTimes(1);
+    });
+
+    it("deletes the favicon files of the removed links", async () => {
+      await client.deleteLinks([removeA.id]);
+
+      expect(mockClient.deleteFile).toHaveBeenCalledWith(
+        `/ReadLater/icons/${removeA.id}.png`
+      );
+    });
+
+    it("does no round trip for an empty selection", async () => {
+      await client.deleteLinks([]);
+
+      expect(mockClient.getFileContents).not.toHaveBeenCalled();
+      expect(mockClient.putFileContents).not.toHaveBeenCalled();
+    });
+  });
+
+  // -- markAsRead --
+
+  describe("markAsRead", () => {
+    const readLater = sampleLink({
+      id: "550e8400-e29b-41d4-a716-446655440020",
+      url: "https://example.com/a",
+      isRead: false,
+    });
+    const untouched = sampleLink({
+      id: "550e8400-e29b-41d4-a716-446655440021",
+      url: "https://example.com/b",
+      isRead: false,
+    });
+
+    beforeEach(() => {
+      mockStore([readLater, untouched]);
+    });
+
+    it("marks only the given links as read", async () => {
+      await client.markAsRead([readLater.id]);
+
+      const saved = JSON.parse(
+        mockClient.putFileContents.mock.calls[0][1] as string
+      ) as LinkStore;
+      expect(saved.links.find((l) => l.id === readLater.id)?.isRead).toBe(true);
+      expect(saved.links.find((l) => l.id === untouched.id)?.isRead).toBe(false);
+    });
+
+    it("does no round trip for an empty selection", async () => {
+      await client.markAsRead([]);
+
+      expect(mockClient.putFileContents).not.toHaveBeenCalled();
     });
   });
 

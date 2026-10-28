@@ -18,6 +18,12 @@ export const LinkSchema = z.object({
 
 export type Link = z.infer<typeof LinkSchema>;
 
+export interface AddLinksResult {
+  added: Link[];
+  reactivated: Link[];
+  skipped: Link[];
+}
+
 export const LinkStoreSchema = z.object({
   version: z.string(),
   links: z.array(LinkSchema),
@@ -241,36 +247,77 @@ export class ReadLaterClient {
   async addLink(
     linkData: Omit<Link, "id" | "addedAt" | "isRead">
   ): Promise<Link> {
+    const { added, reactivated, skipped } = await this.addLinks([linkData]);
+    return added[0] ?? reactivated[0] ?? skipped[0];
+  }
+
+  /**
+   * Adds many links in a single read-modify-write cycle.
+   *
+   * Per URL: already saved and unread → skipped, saved but read → reactivated
+   * (unread again, fresh timestamp), otherwise a new link is created.
+   * Duplicate URLs inside the batch are collapsed to their first occurrence.
+   */
+  async addLinks(
+    linksData: Array<Omit<Link, "id" | "addedAt" | "isRead">>
+  ): Promise<AddLinksResult> {
+    const unique: Array<Omit<Link, "id" | "addedAt" | "isRead">> = [];
+    const seen = new Set<string>();
+    for (const data of linksData) {
+      if (seen.has(data.url)) continue;
+      seen.add(data.url);
+      unique.push(data);
+    }
+
+    if (unique.length === 0) {
+      return { added: [], reactivated: [], skipped: [] };
+    }
+
     return this.withRetry((store) => {
-      const existingIndex = store.links.findIndex(
-        (l) => l.url === linkData.url
-      );
+      const added: Link[] = [];
+      const reactivated: Link[] = [];
+      const skipped: Link[] = [];
+      const front: Link[] = [];
+      const now = new Date().toISOString();
 
-      if (existingIndex !== -1) {
-        const existing = store.links[existingIndex];
-        // Already saved and unread – nothing to do
-        if (!existing.isRead) return existing;
+      for (const data of unique) {
+        const existingIndex = store.links.findIndex(
+          (l) => l.url === data.url
+        );
 
-        // Reactivate: mark unread, update timestamp and title
-        existing.isRead = false;
-        existing.addedAt = new Date().toISOString();
-        existing.title = linkData.title;
-        if (linkData.faviconUrl) existing.faviconUrl = linkData.faviconUrl;
-        if (linkData.faviconData) existing.faviconData = linkData.faviconData;
-        store.links.splice(existingIndex, 1);
-        store.links.unshift(existing);
-        return existing;
+        if (existingIndex !== -1) {
+          const existing = store.links[existingIndex];
+          // Already saved and unread – nothing to do
+          if (!existing.isRead) {
+            skipped.push(existing);
+            continue;
+          }
+
+          // Reactivate: mark unread, update timestamp and title
+          existing.isRead = false;
+          existing.addedAt = now;
+          if (data.title) existing.title = data.title;
+          if (data.faviconUrl) existing.faviconUrl = data.faviconUrl;
+          if (data.faviconData) existing.faviconData = data.faviconData;
+          store.links.splice(existingIndex, 1);
+          front.push(existing);
+          reactivated.push(existing);
+          continue;
+        }
+
+        const newLink: Link = {
+          ...data,
+          id: crypto.randomUUID(),
+          addedAt: now,
+          isRead: false,
+          tags: data.tags || [],
+        };
+        front.push(newLink);
+        added.push(newLink);
       }
 
-      const newLink: Link = {
-        ...linkData,
-        id: crypto.randomUUID(),
-        addedAt: new Date().toISOString(),
-        isRead: false,
-        tags: linkData.tags || [],
-      };
-      store.links.unshift(newLink);
-      return newLink;
+      if (front.length > 0) store.links.unshift(...front);
+      return { added, reactivated, skipped };
     });
   }
 
@@ -294,12 +341,17 @@ export class ReadLaterClient {
    * Uses optimistic concurrency to prevent data loss from parallel writes.
    */
   async deleteLink(id: string): Promise<void> {
-    const faviconPath = await this.withRetry((store) => {
-      const link = store.links.find((l) => l.id === id);
-      store.links = store.links.filter((l) => l.id !== id);
-      return link?.faviconPath;
-    });
-    await this.deleteIconsForLink(id, faviconPath);
+    await this.deleteLinksMatching((link) => link.id === id);
+  }
+
+  /**
+   * Removes several links in one read-modify-write cycle, together with
+   * their stored favicon files.
+   */
+  async deleteLinks(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    const idSet = new Set(ids);
+    await this.deleteLinksMatching((link) => idSet.has(link.id));
   }
 
   /**
@@ -312,16 +364,38 @@ export class ReadLaterClient {
   }
 
   /**
+   * Marks the given links as read in one read-modify-write cycle.
+   */
+  async markAsRead(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    const idSet = new Set(ids);
+    await this.withRetry((store) => {
+      store.links = store.links.map((l) =>
+        idSet.has(l.id) ? { ...l, isRead: true } : l
+      );
+    });
+  }
+
+  /**
    * Deletes all links (resets to empty store) with optimistic concurrency.
    * Also removes every stored favicon file.
    */
   async deleteAllLinks(): Promise<void> {
+    await this.deleteLinksMatching(() => true);
+  }
+
+  /**
+   * Internal: removes every link matching the predicate in one write and
+   * cleans up the corresponding icon files afterwards.
+   */
+  private async deleteLinksMatching(
+    match: (link: Link) => boolean
+  ): Promise<void> {
     const targets = await this.withRetry((store) => {
-      const list = store.links.map((l) => ({
-        id: l.id,
-        faviconPath: l.faviconPath,
-      }));
-      store.links = [];
+      const list = store.links
+        .filter(match)
+        .map((l) => ({ id: l.id, faviconPath: l.faviconPath }));
+      store.links = store.links.filter((l) => !match(l));
       return list;
     });
     await Promise.all(
