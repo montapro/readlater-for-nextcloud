@@ -58,8 +58,10 @@ readlater-for-nextcloud/
 
 ### Browser Extension (Chrome & Firefox)
 - One-click save from any tab (save button in header)
+- Bulk save — with 2+ tabs highlighted, the save button shows a count badge and saves them all
 - Badge counter showing unread link count, green when current tab is already saved
 - Search bar — filter links by title, URL, or tags
+- **Selection actions** — check single links or "select all", then open, mark as read, or delete them in bulk
 - WebDAV connection test button
 - **Draft auto-save** — form inputs persist even when the popup closes (switch windows safely)
 - **Reactivation** — saving an already-read link marks it unread and moves it back to the top
