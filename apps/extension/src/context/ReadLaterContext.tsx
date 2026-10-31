@@ -663,9 +663,9 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     [doRefreshLinks, showStatus],
   );
 
-  const openInBackgroundTab = useCallback(async (url: string) => {
+  const openTab = useCallback(async (url: string, active: boolean) => {
     try {
-      await browser.tabs.create({ url, active: false });
+      await browser.tabs.create({ url, active });
       return true;
     } catch (err) {
       console.error("ReadLater: failed to open link", url, err);
@@ -673,12 +673,18 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const openInBackgroundTab = useCallback(
+    (url: string) => openTab(url, false),
+    [openTab]
+  );
+
+  /** Single link: bring the tab to the foreground (closes the popup). */
   const openLink = useCallback(
     async (url: string) => {
-      const ok = await openInBackgroundTab(url);
+      const ok = await openTab(url, true);
       if (!ok) showStatus("Could not open link.", "error");
     },
-    [openInBackgroundTab, showStatus]
+    [openTab, showStatus]
   );
 
   const handleDeleteLink = useCallback(
