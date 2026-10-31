@@ -62,14 +62,13 @@ interface ReadLaterContextValue {
   currentTab: { url?: string; title?: string };
   isUrlValid: boolean;
   isAlreadySavedAndUnread: boolean;
-  loginStatus: LoginStatus;
-  connectToNextcloud: (instance: string, basePath: string) => Promise<void>;
+  loginStatus: LoginStatus;connectToNextcloud: (instance: string, basePath: string) => Promise<void>;
   disconnect: () => Promise<void>;
   setBasePath: (path: string) => Promise<void>;
   refreshLinks: () => Promise<void>;
   testConnection: () => Promise<void>;
   saveCurrentLink: () => Promise<void>;
-  saveTabsOrCurrent: () => Promise<void>;
+  saveTabsOrToggleCurrent: () => Promise<void>;
   /** Number of saveable highlighted tabs; badge is shown when >= 2. */
   highlightedTabCount: number;
   savingTabs: boolean;
@@ -564,7 +563,37 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     }
   }, [currentTab, isAlreadySavedAndUnread, doRefreshLinks, showStatus]);
 
-  const saveTabsOrCurrent = useCallback(async () => {
+  /** Saved + unread current tab: remove it again. Otherwise save it. */
+  const toggleCurrentLink = useCallback(async () => {
+    const existing = currentTab.url
+      ? links.find((l) => l.url === currentTab.url && !l.isRead)
+      : undefined;
+
+    if (!existing) {
+      await saveCurrentLink();
+      return;
+    }
+
+    try {
+      const client = getClient(configRef.current);
+      await client.deleteLink(existing.id);
+      showStatus("Removed from ReadLater.", "success");
+      await doRefreshLinks(configRef.current);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Removal failed.";
+      console.error("ReadLater: toggleCurrentLink error", err);
+      showStatus(message, "error");
+    }
+  }, [
+    currentTab.url,
+    links,
+    saveCurrentLink,
+    doRefreshLinks,
+    showStatus,
+  ]);
+
+  const saveTabsOrToggleCurrent = useCallback(async () => {
     if (savingTabs) return;
 
     let items: TabToSave[] = [];
@@ -574,9 +603,9 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       console.error("ReadLater: could not read highlighted tabs", err);
     }
 
-    // Nothing multi-selected (or nothing saveable): behave like before.
+    // Nothing multi-selected (or nothing saveable): toggle the current tab.
     if (items.length < 2) {
-      await saveCurrentLink();
+      await toggleCurrentLink();
       return;
     }
 
@@ -611,12 +640,12 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Saving tabs failed.";
-      console.error("ReadLater: saveTabsOrCurrent error", err);
+      console.error("ReadLater: saveTabsOrToggleCurrent error", err);
       showStatus(message, "error");
     } finally {
       setSavingTabs(false);
     }
-  }, [savingTabs, saveCurrentLink, askConfirm, doRefreshLinks, showStatus]);
+  }, [savingTabs, toggleCurrentLink, askConfirm, doRefreshLinks, showStatus]);
 
   const handleToggleRead = useCallback(
     async (id: string, _isRead: boolean) => {
@@ -827,7 +856,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       refreshLinks,
       testConnection,
       saveCurrentLink,
-      saveTabsOrCurrent,
+      saveTabsOrToggleCurrent,
       highlightedTabCount,
       savingTabs,
       handleToggleRead,
@@ -871,7 +900,7 @@ export function ReadLaterProvider({ children }: { children: ReactNode }) {
       refreshLinks,
       testConnection,
       saveCurrentLink,
-      saveTabsOrCurrent,
+      saveTabsOrToggleCurrent,
       highlightedTabCount,
       savingTabs,
       handleToggleRead,

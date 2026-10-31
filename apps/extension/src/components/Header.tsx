@@ -9,7 +9,7 @@ export function Header() {
     refreshLinks,
     showSettings,
     setShowSettings,
-    saveTabsOrCurrent,
+    saveTabsOrToggleCurrent,
     highlightedTabCount,
     savingTabs,
     isAlreadySavedAndUnread,
@@ -20,7 +20,9 @@ export function Header() {
   const showSavedCheck = !isMultiSave && isAlreadySavedAndUnread;
   const saveTitle = isMultiSave
     ? `Save ${highlightedTabCount} selected tabs`
-    : "Save current tab";
+    : showSavedCheck
+      ? "Remove from ReadLater"
+      : "Save current tab";
 
   return (
     <header className="px-4 py-3 border-b flex items-center justify-between bg-card sticky top-0 z-10 shadow-sm border-border">
@@ -37,13 +39,12 @@ export function Header() {
       </div>
       <div className="flex items-center gap-1">
         <button
-          onClick={saveTabsOrCurrent}
+          onClick={saveTabsOrToggleCurrent}
           disabled={
             (status.visible && status.type === "info") ||
             loading ||
             savingTabs ||
-            !isConfigured ||
-            showSavedCheck
+            !isConfigured
           }
           className="relative p-2 hover:bg-muted rounded-full transition-colors cursor-pointer disabled:cursor-default"
           title={saveTitle}
