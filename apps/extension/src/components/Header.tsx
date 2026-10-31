@@ -1,6 +1,6 @@
 import React from "react";
 import { useReadLater } from "../context/ReadLaterContext";
-import { Settings, RefreshCw, Save, CheckCircle2 } from "lucide-react";
+import { Settings, RefreshCw, Save, CheckCircle2, Trash2 } from "lucide-react";
 
 export function Header() {
   const {
@@ -46,11 +46,16 @@ export function Header() {
             savingTabs ||
             !isConfigured
           }
-          className="relative p-2 hover:bg-muted rounded-full transition-colors cursor-pointer disabled:cursor-default"
+          className={`group relative p-2 rounded-full transition-colors cursor-pointer disabled:cursor-default ${
+            showSavedCheck ? "hover:bg-destructive/10" : "hover:bg-muted"
+          }`}
           title={saveTitle}
         >
           {showSavedCheck ? (
-            <CheckCircle2 className="w-4 h-4 text-green-500" />
+            <>
+              <CheckCircle2 className="w-4 h-4 text-green-500 group-hover:hidden" />
+              <Trash2 className="hidden w-4 h-4 text-destructive group-hover:block" />
+            </>
           ) : (
             <Save
               className={`w-4 h-4 text-muted-foreground ${savingTabs ? "animate-pulse" : ""}`}
